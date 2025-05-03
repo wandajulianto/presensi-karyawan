@@ -12,7 +12,9 @@
         <div class="right"></div>
     </div>
     <!-- * App Header -->
+
     <style>
+        /* Webcam styling */
         .webcam-capture,
         .webcam-capture video {
             display: inline-block;
@@ -22,21 +24,27 @@
             border-radius: 15px;
         }
 
+        /* Map container styling */
         #map {
             height: 250px;
         }
     </style>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+    <!-- Leaflet CSS and JS for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 @endsection
 
 @section('content')
+    <!-- Webcam Capture Section -->
     <div class="row" style="margin-top: 70px">
         <div class="col">
             <input type="hidden" id="location">
             <div class="webcam-capture"></div>
         </div>
     </div>
+
+    <!-- Absent Button Section -->
     <div class="row">
         <div class="col">
             @if ($isAbsent > 0)
@@ -52,6 +60,8 @@
             @endif
         </div>
     </div>
+
+    <!-- Map Section -->
     <div class="row mt-2">
         <div class="col">
             <div id="map"></div>
@@ -61,6 +71,7 @@
 
 @push('myScript')
     <script>
+        // Initialize webcam settings
         Webcam.set({
             height: 480,
             width: 640,
@@ -68,27 +79,41 @@
             imageQuality: 80,
         });
 
+        // Attach webcam to the capture element
         Webcam.attach('.webcam-capture');
 
-        var locationInput = document.getElementById('location');
+        // Get location input element
+        const locationInput = document.getElementById('location');
 
+        // Check if geolocation is available
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
         }
 
+        /**
+         * Success callback for geolocation
+         * @param {GeolocationPosition} position - The position object
+         */
         function successCallback(position) {
-            locationInput.value = position.coords.latitude + ',' + position.coords.longitude;
+            // Set location value
+            const lat = position.coords.latitude;
+            const long = position.coords.longitude;
+            locationInput.value = `${lat},${long}`;
 
-            var map = L.map('map').setView([position.coords.latitude, position.coords.longitude], 18);
+            // Initialize map
+            const map = L.map('map').setView([lat, long], 18);
 
+            // Add tile layer
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(map);
 
-            var marker = L.marker([position.coords.latitude, position.coords.longitude]).addTo(map);
+            // Add marker for current position
+            const marker = L.marker([lat, long]).addTo(map);
 
-            var circle = L.circle([-7.33351589751558, 108.22279680492574], {
+            // Add circle for office radius (hardcoded office location)
+            const officeCircle = L.circle([-7.33351589751558, 108.22279680492574], {
                 color: 'red',
                 fillColor: '#f03',
                 fillOpacity: 0.5,
@@ -96,61 +121,82 @@
             }).addTo(map);
         }
 
+        /**
+         * Error callback for geolocation
+         */
         function errorCallback() {
-            alert("Geolocation gagal!");
+            Swal.fire({
+                title: 'Peringatan!',
+                text: 'Akses lokasi diperlukan untuk absen. Mohon aktifkan GPS/lokasi.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
         }
 
-        $("#takeAbsent").click(function (e) {
-            Webcam.snap(function (uri) {
-                var image = uri;
-                var locationId = $("#location").val();
+        // Handle absent button click
+        $("#takeAbsent").click(function(e) {
+            // Capture image from webcam
+            Webcam.snap(function(uri) {
+                const image = uri;
+                const locationId = $("#location").val();
 
+                // Send data to server
                 $.ajax({
                     type: 'POST',
-                    url: '{{ route('presention.store') }}', // Gunakan route named
+                    url: '{{ route('presensi.store') }}',
                     data: {
                         _token: "{{ csrf_token() }}",
                         image: image,
                         location: locationId,
                     },
                     cache: false,
-                    success: function (respond) {
-                        var status = respond.split("|")
-                        if (status[0] == "success") {
-                            Swal.fire({
-                                title: 'Berhasil!',
-                                text: status[1],
-                                icon: 'success',
-                                confirmButtonText: 'OK',
-                                timer: 3000, // Auto close setelah 3 detik
-                                timerProgressBar: true, // Menampilkan progress bar
-                                willClose: () => {
-                                    // Redirect ketika alert ditutup (baik manual maupun auto close)
-                                    window.location.href = '/dashboard';
-                                }
-                            });
+                    success: function(respond) {
+                        const status = respond.split("|");
+                        
+                        if (status[0] === "success") {
+                            showSuccessAlert(status[1]);
                         } else {
-                            Swal.fire({
-                                title: 'Error!',
-                                text: status[1],
-                                icon: 'error',
-                                confirmButtonText: 'OK',
-                                timer: 3000, // Auto close setelah 3 detik
-                                timerProgressBar: true, // Menampilkan progress bar
-                            });
+                            showErrorAlert(status[1]);
                         }
                     },
-                    error: function () {
-                        Swal.fire({
-                            title: 'Error!',
-                            text: 'Terjadi masalah pada server, coba lagi nanti.',
-                            icon: 'error',
-                            confirmButtonText: 'OK',
-                        });
+                    error: function() {
+                        showErrorAlert('Terjadi masalah pada server, coba lagi nanti.');
                     }
                 });
             });
         });
 
+        /**
+         * Show success alert
+         * @param {string} message - The success message
+         */
+        function showSuccessAlert(message) {
+            Swal.fire({
+                title: 'Berhasil!',
+                text: message,
+                icon: 'success',
+                confirmButtonText: 'OK',
+                timer: 3000,
+                timerProgressBar: true,
+                willClose: () => {
+                    window.location.href = '/dashboard';
+                }
+            });
+        }
+
+        /**
+         * Show error alert
+         * @param {string} message - The error message
+         */
+        function showErrorAlert(message) {
+            Swal.fire({
+                title: 'Error!',
+                text: message,
+                icon: 'error',
+                confirmButtonText: 'OK',
+                timer: 3000,
+                timerProgressBar: true,
+            });
+        }
     </script>
 @endpush
