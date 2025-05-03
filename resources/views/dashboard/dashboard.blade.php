@@ -2,26 +2,28 @@
 
 @section('content')
 
-<!-- User Section -->
+<!-- Bagian User -->
 <div class="section" id="user-section">
     <div id="user-detail">
         <div class="avatar">
+            <!-- Gambar avatar pengguna -->
             <img src="assets/img/sample/avatar/avatar1.jpg" alt="avatar" class="imaged w64 rounded">
         </div>
         <div id="user-info">
-            <h2 id="user-name">Adam Abdi Al A'la</h2>
-            <span id="user-role">Head of IT</span>
+            <h2 id="user-name">{{ $fullName }}</h2>
+            <span id="user-role">{{ $role }}</span>
         </div>
     </div>
 </div>
 
-<!-- Menu Section -->
+<!-- Bagian Menu -->
 <div class="section" id="menu-section">
     <div class="card">
         <div class="card-body text-center">
             <div class="list-menu">
 
                 @php
+                    // Daftar menu utama
                     $menus = [
                         ['icon' => 'person-sharp', 'label' => 'Profil', 'class' => 'green'],
                         ['icon' => 'calendar-number', 'label' => 'Cuti', 'class' => 'danger'],
@@ -48,11 +50,11 @@
     </div>
 </div>
 
-<!-- Presence Section -->
+<!-- Bagian Presensi Hari Ini -->
 <div class="section mt-2" id="presence-section">
     <div class="todaypresence">
         <div class="row">
-            <!-- Masuk Card -->
+            <!-- Kartu Masuk -->
             <div class="col-6">
                 <div class="card gradasigreen">
                     <div class="card-body">
@@ -62,7 +64,7 @@
                                     @php
                                         $fotoMasuk = Storage::url('uploads/absention/' . $todayPresention->foto_masuk);
                                     @endphp
-                                    <img src="{{ url($fotoMasuk) }}" alt="Foto Masuk" class="imaged w64">
+                                    <img src="{{ url($fotoMasuk) }}" alt="Foto Masuk" class="imaged w48">
                                 @else
                                     <ion-icon name="camera"></ion-icon>
                                 @endif
@@ -76,7 +78,7 @@
                 </div>
             </div>
 
-            <!-- Pulang Card -->
+            <!-- Kartu Pulang -->
             <div class="col-6">
                 <div class="card gradasired">
                     <div class="card-body">
@@ -86,7 +88,7 @@
                                     @php
                                         $fotoKeluar = Storage::url('uploads/absention/' . $todayPresention->foto_keluar);
                                     @endphp
-                                    <img src="{{ url($fotoKeluar) }}" alt="Foto Pulang" class="imaged w64">
+                                    <img src="{{ url($fotoKeluar) }}" alt="Foto Pulang" class="imaged w48">
                                 @else
                                     <ion-icon name="camera"></ion-icon>
                                 @endif
@@ -102,21 +104,49 @@
         </div>
     </div>
 
-    <!-- Tabs: Bulan Ini & Leaderboard -->
+    <!-- Rekap Presensi Bulanan -->
+    <div id="rekappresence">
+        <h3>Rekap Presensi Bulan {{ $monthName }} Tahun {{ $currentYear }}</h3>
+        <div class="row">
+            @php
+                // Data statis, sebaiknya diubah ke variabel dinamis di controller
+                $rekapData = [
+                    ['count' => $recapPresention->totalPresence, 'icon' => 'accessibility-outline', 'label' => 'Hadir', 'color' => 'text-primary'],
+                    ['count' => 10, 'icon' => 'newspaper-outline', 'label' => 'Izin', 'color' => 'text-success'],
+                    ['count' => 10, 'icon' => 'medkit-outline', 'label' => 'Sakit', 'color' => 'text-warning'],
+                    ['count' => $recapPresention->totalLate, 'icon' => 'alarm-outline', 'label' => 'Telat', 'color' => 'text-danger'],
+                ];
+            @endphp
+
+            @foreach ($rekapData as $data)
+                <div class="col-3">
+                    <div class="card">
+                        <div class="card-body text-center" style="padding: 12px 12px !important; line-height: 0.8rem">
+                            <span class="badge bg-danger" style="position: absolute; top: 3px; right: 10px; font-size: 0.6rem; z-index: 999">
+                                {{ $data['count'] }}
+                            </span>
+                            <ion-icon name="{{ $data['icon'] }}" style="font-size: 1.6rem" class="{{ $data['color'] }} mb-1"></ion-icon>
+                            <br>
+                            <span style="font-size: 0.8rem; font-weight:500">{{ $data['label'] }}</span>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+
+    <!-- Tab Presensi Bulan Ini -->
     <div class="presencetab mt-2">
         <div class="tab-pane fade show active" id="pilled" role="tabpanel">
             <ul class="nav nav-tabs style1" role="tablist">
                 <li class="nav-item">
-                    <a class="nav-link active" data-toggle="tab" href="#home" role="tab">Bulan Ini</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-toggle="tab" href="#profile" role="tab">Leaderboard</a>
+                    <span class="nav-link active">{{ $monthName }}</span>
                 </li>
             </ul>
         </div>
 
+        <!-- Daftar histori presensi -->
         <div class="tab-content mt-2" style="margin-bottom:100px;">
-            <!-- Tab: Bulan Ini -->
             <div class="tab-pane fade show active" id="home" role="tabpanel">
                 <ul class="listview image-listview">
                     @foreach ($monthlyHistory as $item)
@@ -131,40 +161,7 @@
                                 <div class="in">
                                     <div>{{ date('d-m-Y', strtotime($item->tanggal_presensi)) }}</div>
                                     <span class="badge badge-success">{{ $item->jam_masuk }}</span>
-                                    <span class="badge badge-danger">
-                                        {{ $item->jam_keluar ?? 'Belum Absen' }}
-                                    </span>
-                                </div>
-                            </div>
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-
-            <!-- Tab: Leaderboard -->
-            <div class="tab-pane fade" id="profile" role="tabpanel">
-                <ul class="listview image-listview">
-                    @php
-                        $leaders = [
-                            ['name' => 'Edward Lindgren', 'role' => 'Designer'],
-                            ['name' => 'Emelda Scandroot', 'badge' => '3'],
-                            ['name' => 'Henry Bove'],
-                            ['name' => 'Henry Bove'],
-                            ['name' => 'Henry Bove'],
-                        ];
-                    @endphp
-
-                    @foreach ($leaders as $leader)
-                        <li>
-                            <div class="item">
-                                <img src="assets/img/sample/avatar/avatar1.jpg" alt="image" class="image">
-                                <div class="in">
-                                    <div>{{ $leader['name'] }}</div>
-                                    @if (isset($leader['role']))
-                                        <span class="text-muted">{{ $leader['role'] }}</span>
-                                    @elseif (isset($leader['badge']))
-                                        <span class="badge badge-primary">{{ $leader['badge'] }}</span>
-                                    @endif
+                                    <span class="badge badge-danger">{{ $item->jam_keluar ?? 'Belum Absen' }}</span>
                                 </div>
                             </div>
                         </li>

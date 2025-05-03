@@ -16,17 +16,21 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        // Ambil tanggal hari ini menggunakan Carbon
+        // Ambil user yang sedang login via guard 'karyawan'
+        $user = Auth::guard('karyawan')->user();
+
+        // Ambil data user yang dibutuhkan
+        $fullName = $user->nama_lengkap;
+        $role = $user->jabatan;
+        $nik = $user->nik;
+
+        // Ambil tanggal hari ini, bulan dan tahun saat ini
         $today = Carbon::today();
+        $currentMonth = Carbon::now()->month;
+        $currentYear = Carbon::now()->year;
+        $monthName = Carbon::now()->translatedFormat('F');
 
-        // Ambil bulan dan tahun sekarang
-        $currentMonth = $today->month;
-        $currentYear = $today->year;
-
-        // Ambil NIK karyawan yang sedang login
-        $nik = Auth::guard('karyawan')->user()->nik;
-
-        // Ambil data presensi untuk hari ini
+        // Ambil data presensi hari ini
         $todayPresence = DB::table('presensi')
             ->where('nik', $nik)
             ->whereDate('tanggal_presensi', $today)
@@ -40,10 +44,23 @@ class DashboardController extends Controller
             ->orderBy('tanggal_presensi')
             ->get();
 
-        // Tampilkan tampilan dashboard dengan data yang dibutuhkan
+        // Ambil rekap presensi: total kehadiran dan total keterlambatan (jam_masuk > 07:00)
+        $recapPresention = DB::table('presensi')
+            ->selectRaw('COUNT(nik) as totalPresence, SUM(IF(jam_masuk > "07:00", 1, 0)) as totalLate')
+            ->where('nik', $nik)
+            ->whereMonth('tanggal_presensi', $currentMonth)
+            ->whereYear('tanggal_presensi', $currentYear)
+            ->first();
+
+        // Kirim semua data ke tampilan dashboard
         return view('dashboard.dashboard', [
+            'fullName' => $fullName,
+            'role' => $role,
             'todayPresention' => $todayPresence,
-            'monthlyHistory' => $monthlyHistory
+            'monthlyHistory' => $monthlyHistory,
+            'monthName' => $monthName,
+            'currentYear' => $currentYear,
+            'recapPresention' => $recapPresention,
         ]);
     }
 }
