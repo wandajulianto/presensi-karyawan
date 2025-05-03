@@ -6,13 +6,16 @@
 <div class="section" id="user-section">
     <div id="user-detail">
         <div class="avatar">
-            <!-- Gambar avatar pengguna -->
-            <img src="assets/img/sample/avatar/avatar1.jpg" alt="avatar" class="imaged w64 rounded">
-        </div>
+            @php
+                $defaultFoto = asset('assets/img/sample/avatar/avatar1.jpg');
+                $fotoProfile = $foto ? Storage::url('uploads/foto_karyawan/' . $foto) : $defaultFoto;
+            @endphp       
+            <img src="{{ $fotoProfile }}" alt="avatar" class="imaged w64" style="height: 60px;">
+        </div>       
         <div id="user-info">
             <h2 id="user-name">{{ $fullName }}</h2>
             <span id="user-role">{{ $role }}</span>
-        </div>
+        </div>        
     </div>
 </div>
 
