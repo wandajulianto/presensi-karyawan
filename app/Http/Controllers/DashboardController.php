@@ -23,6 +23,7 @@ class DashboardController extends Controller
         $fullName = $user->nama_lengkap;
         $role = $user->jabatan;
         $nik = $user->nik;
+        $foto = $user->foto;
 
         // Ambil tanggal hari ini, bulan dan tahun saat ini
         $today = Carbon::today();
@@ -56,6 +57,7 @@ class DashboardController extends Controller
         return view('dashboard.dashboard', [
             'fullName' => $fullName,
             'role' => $role,
+            'foto' => $foto,
             'todayPresention' => $todayPresence,
             'monthlyHistory' => $monthlyHistory,
             'monthName' => $monthName,
