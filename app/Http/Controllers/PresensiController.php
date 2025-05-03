@@ -11,8 +11,16 @@ use Carbon\Carbon;
 
 class PresensiController extends Controller
 {
+    // Koordinat kantor tetap sebagai konstanta class
+    private const OFFICE_LAT = -7.33351589751558;
+    private const OFFICE_LONG = 108.22279680492574;
+    private const MAX_DISTANCE_METERS = 20;
+
     /**
-     * Tampilkan halaman presensi dan cek apakah user sudah absen hari ini.
+     * Menampilkan halaman presensi.
+     * Mengecek apakah user sudah melakukan presensi hari ini.
+     * 
+     * @return \Illuminate\View\View
      */
     public function create()
     {
@@ -28,13 +36,17 @@ class PresensiController extends Controller
     }
 
     /**
-     * Simpan data presensi (masuk atau keluar).
+     * Menyimpan data presensi (masuk/keluar) ke database.
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
         try {
             $user = Auth::guard('karyawan')->user();
 
+            // Validasi user dan NIK
             if (!$user || !$user->nik) {
                 return response()->json([
                     'success' => false,
@@ -46,34 +58,24 @@ class PresensiController extends Controller
             $tanggal = Carbon::today()->toDateString();
             $jam = Carbon::now()->format('H:i:s');
 
-            // Koordinat kantor
-            $officeLat = -7.33351589751558;
-            $officeLong = 108.22279680492574;
-
-            // Ambil lokasi user dari request
-            if (!$request->filled('location') || !str_contains($request->location, ',')) {
+            // Validasi lokasi
+            if (!$this->isValidLocation($request->location)) {
                 return response("error|Lokasi tidak valid|");
             }
 
             [$userLat, $userLong] = explode(',', $request->location);
+            $distance = $this->calculateDistanceFromOffice($userLat, $userLong);
 
-            $radius = round($this->calculateDistance($officeLat, $officeLong, $userLat, $userLong)['meters']);
-
-            if ($radius > 20) {
-                return response("error|Maaf, Anda berada di luar radius kantor. Jarak Anda {$radius} meter dari kantor|");
+            if ($distance > self::MAX_DISTANCE_METERS) {
+                return response("error|Maaf, Anda berada di luar radius kantor. Jarak Anda {$distance} meter dari kantor|");
             }
 
-            // Cek status absen hari ini
-            $isAlreadyAbsent = DB::table('presensi')
-                ->where('tanggal_presensi', $tanggal)
-                ->where('nik', $nik)
-                ->exists();
+            // Cek apakah sudah absen hari ini dan tentukan status
+            $status = $this->getAttendanceStatus($nik, $tanggal);
 
-            $status = $isAlreadyAbsent ? 'out' : 'in';
-
-            // Validasi dan simpan gambar
+            // Validasi dan simpan gambar base64
             $image = $request->input('image');
-            if (!$image || !str_contains($image, ';base64,')) {
+            if (!$this->isValidBase64Image($image)) {
                 return response("error|Format gambar tidak valid|{$status}");
             }
 
@@ -87,39 +89,10 @@ class PresensiController extends Controller
             $storagePath = "uploads/absention/{$fileName}";
 
             if ($status === 'out') {
-                // Update absen keluar
-                $updated = DB::table('presensi')
-                    ->where('tanggal_presensi', $tanggal)
-                    ->where('nik', $nik)
-                    ->update([
-                        'jam_keluar' => $jam,
-                        'foto_keluar' => $fileName,
-                        'lokasi_keluar' => $request->location,
-                    ]);
-
-                if ($updated) {
-                    $this->saveImage($storagePath, $imageBinary);
-                    return response("success|Terima kasih, hati-hati di jalan|out");
-                }
-
-                return response("error|Absen keluar gagal, silakan hubungi admin|out");
+                return $this->processCheckOut($nik, $tanggal, $jam, $request->location, $fileName, $storagePath, $imageBinary);
             }
 
-            // Insert absen masuk
-            $inserted = DB::table('presensi')->insert([
-                'nik' => $nik,
-                'tanggal_presensi' => $tanggal,
-                'jam_masuk' => $jam,
-                'foto_masuk' => $fileName,
-                'lokasi_masuk' => $request->location,
-            ]);
-
-            if ($inserted) {
-                $this->saveImage($storagePath, $imageBinary);
-                return response("success|Terima kasih, selamat bekerja|in");
-            }
-
-            return response("error|Absen masuk gagal, silakan hubungi admin|in");
+            return $this->processCheckIn($nik, $tanggal, $jam, $request->location, $fileName, $storagePath, $imageBinary);
 
         } catch (\Exception $e) {
             Log::error("Presensi error: " . $e->getMessage());
@@ -128,7 +101,96 @@ class PresensiController extends Controller
     }
 
     /**
-     * Simpan gambar ke storage publik.
+     * Memproses presensi masuk
+     */
+    private function processCheckIn($nik, $tanggal, $jam, $location, $fileName, $storagePath, $imageBinary)
+    {
+        $inserted = DB::table('presensi')->insert([
+            'nik' => $nik,
+            'tanggal_presensi' => $tanggal,
+            'jam_masuk' => $jam,
+            'foto_masuk' => $fileName,
+            'lokasi_masuk' => $location,
+        ]);
+
+        if ($inserted) {
+            $this->saveImage($storagePath, $imageBinary);
+            return response("success|Terima kasih, selamat bekerja|in");
+        }
+
+        return response("error|Absen masuk gagal, silakan hubungi admin|in");
+    }
+
+    /**
+     * Memproses presensi keluar
+     */
+    private function processCheckOut($nik, $tanggal, $jam, $location, $fileName, $storagePath, $imageBinary)
+    {
+        $updated = DB::table('presensi')
+            ->where('tanggal_presensi', $tanggal)
+            ->where('nik', $nik)
+            ->update([
+                'jam_keluar' => $jam,
+                'foto_keluar' => $fileName,
+                'lokasi_keluar' => $location,
+            ]);
+
+        if ($updated) {
+            $this->saveImage($storagePath, $imageBinary);
+            return response("success|Terima kasih, hati-hati di jalan|out");
+        }
+
+        return response("error|Absen keluar gagal, silakan hubungi admin|out");
+    }
+
+    /**
+     * Mengecek status presensi (masuk/keluar)
+     */
+    private function getAttendanceStatus($nik, $tanggal)
+    {
+        return DB::table('presensi')
+            ->where('tanggal_presensi', $tanggal)
+            ->where('nik', $nik)
+            ->exists() ? 'out' : 'in';
+    }
+
+    /**
+     * Validasi format lokasi
+     */
+    private function isValidLocation($location)
+    {
+        return $location && str_contains($location, ',');
+    }
+
+    /**
+     * Validasi format gambar base64
+     */
+    private function isValidBase64Image($image)
+    {
+        return $image && str_contains($image, ';base64,');
+    }
+
+    /**
+     * Menghitung jarak dari kantor dalam meter
+     */
+    private function calculateDistanceFromOffice($userLat, $userLong)
+    {
+        $result = $this->calculateDistance(
+            self::OFFICE_LAT, 
+            self::OFFICE_LONG, 
+            $userLat, 
+            $userLong
+        );
+        
+        return round($result['meters']);
+    }
+
+    /**
+     * Menyimpan gambar ke storage disk publik.
+     * 
+     * @param string $path
+     * @param string $content
+     * @throws \Exception
      */
     private function saveImage(string $path, string $content): void
     {
@@ -141,7 +203,13 @@ class PresensiController extends Controller
     }
 
     /**
-     * Hitung jarak dua titik koordinat dalam meter.
+     * Menghitung jarak antara dua titik koordinat dalam meter.
+     * 
+     * @param float $lat1 Latitude titik pertama
+     * @param float $lon1 Longitude titik pertama
+     * @param float $lat2 Latitude titik kedua
+     * @param float $lon2 Longitude titik kedua
+     * @return array ['meters' => jarak dalam meter]
      */
     private function calculateDistance($lat1, $lon1, $lat2, $lon2): array
     {
@@ -153,5 +221,45 @@ class PresensiController extends Controller
         $meters = $miles * 1.609344 * 1000;
 
         return ['meters' => $meters];
+    }
+
+    /**
+     * Menampilkan halaman riwayat presensi.
+     * 
+     * @return \Illuminate\View\View
+     */
+    public function history(Request $request)
+    {
+        $months = [
+            '01' => 'Januari', '02' => 'Februari', '03' => 'Maret',
+            '04' => 'April', '05' => 'Mei', '06' => 'Juni',
+            '07' => 'Juli', '08' => 'Agustus', '09' => 'September',
+            '10' => 'Oktober', '11' => 'November', '12' => 'Desember',
+        ];
+
+        return view('presensi.history', compact('months'));
+    }
+
+    /**
+     * Mencari riwayat presensi berdasarkan bulan dan tahun.
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\View\View
+     */
+    public function searchHistory(Request $request)
+    {
+        $user = Auth::guard('karyawan')->user();
+        $nik = $user->nik;
+        $month = $request->month;
+        $year = $request->year;
+
+        $history = DB::table('presensi')
+            ->whereMonth('tanggal_presensi', $month)
+            ->whereYear('tanggal_presensi', $year)
+            ->where('nik', $nik)
+            ->orderBy('tanggal_presensi')
+            ->get();
+
+        return view('presensi.historyResult', compact('history'));
     }
 }
