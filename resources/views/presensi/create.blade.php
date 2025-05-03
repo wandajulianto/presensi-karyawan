@@ -88,7 +88,7 @@
 
             var marker = L.marker([position.coords.latitude, position.coords.longitude]).addTo(map);
 
-            var circle = L.circle([position.coords.latitude, position.coords.longitude], {
+            var circle = L.circle([-7.33351589751558, 108.22279680492574], {
                 color: 'red',
                 fillColor: '#f03',
                 fillOpacity: 0.5,
@@ -132,7 +132,7 @@
                         } else {
                             Swal.fire({
                                 title: 'Error!',
-                                text: 'Absen Anda Gagal, Silahkan Hubungi Admin',
+                                text: status[1],
                                 icon: 'error',
                                 confirmButtonText: 'OK',
                                 timer: 3000, // Auto close setelah 3 detik
