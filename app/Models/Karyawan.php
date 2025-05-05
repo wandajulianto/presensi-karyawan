@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\PengajuanIzin;
 
 class Karyawan extends Authenticatable
 {
@@ -37,6 +40,11 @@ class Karyawan extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    public function pengajuanIzin(): HasMany
+    {
+        return $this->hasMany(pengajuanIzin::class, 'nik', 'nik');
+    }
 
     /**
      * Konversi tipe atribut.

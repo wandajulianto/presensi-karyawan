@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PengajuanIzin;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -261,5 +263,82 @@ class PresensiController extends Controller
             ->get();
 
         return view('presensi.historyResult', compact('history'));
+    }
+
+    /**
+     * Menampilkan data izin/sakit.
+     * 
+     * @return \Illuminate\View\View
+     */
+    public function izin(Request $request)
+    {
+        $nik = auth('karyawan')->user()->nik;
+
+        $query = PengajuanIzin::where('nik', $nik);
+
+        // Menyaring berdasarkan tanggal jika ada
+        if ($request->filled('startDate') && $request->filled('endDate')) {
+            // Konversi format dari d-m-Y ke Y-m-d
+            $startDate = \Carbon\Carbon::createFromFormat('d-m-Y', $request->startDate)->format('Y-m-d');
+            $endDate = \Carbon\Carbon::createFromFormat('d-m-Y', $request->endDate)->format('Y-m-d');
+
+            $query->whereBetween('tanggal_izin', [$startDate, $endDate]);
+        }
+
+        // Menyaring berdasarkan status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Menyaring berdasarkan approval
+        if ($request->filled('approval')) {
+            $query->where('status_approved', $request->approval);
+        }
+
+        // Ambil data berdasarkan query
+        $dataIzin = $query->orderByDesc('created_at')->get();
+
+        return view('presensi.izin', compact('dataIzin'));
+    }
+
+    /**
+     * Menampilkan formulir permohonan izin/sakit.
+     * 
+     * @return \Illuminate\View\View
+     */
+    public function createIzin()
+    {
+        return view('presensi.createIzin');
+    }
+
+    /**
+     * Menyimpan data izin/sakit ke database.
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     */
+    public function storeIzin(Request $request)
+    {
+        // Validasi input dari form
+        $credentials = $request->validate([
+            'tanggalIzin' => 'required|date',
+            'status' => 'required|in:i,s',
+            'keterangan' => 'required|string|max:1000',
+        ]);
+
+        // Simpan data jika lolos validasi
+        $save = PengajuanIzin::create([
+            'nik' => auth('karyawan')->user()->nik, // asumsi user login
+            'tanggal_izin' => $request->tanggalIzin,
+            'status' => $request->status,
+            'keterangan' => $request->keterangan,
+            'status_approved' => '0', // default pending
+        ]);
+
+        // Jika data tidak berhasil disimpan, maka tampilkan pesan error
+        if (!$save) {
+            return redirect()->route('presensi.izin')->with(['error' => 'Data Gagal Disimpan']);
+        }
+
+        return redirect()->route('presensi.izin')->with(['success' => 'Data Berhasil Disimpan']);
     }
 }

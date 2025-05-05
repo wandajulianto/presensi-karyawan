@@ -20,8 +20,7 @@ Route::middleware('auth:karyawan')->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Logout - menggunakan POST sesuai best practice
-    // Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 
     // Presensi
     Route::prefix('presensi')->controller(PresensiController::class)->group(function () {
@@ -29,6 +28,9 @@ Route::middleware('auth:karyawan')->group(function () {
         Route::post('/store', 'store')->name('presensi.store');
         Route::get('/history', 'history')->name('presensi.history');
         Route::post('/history/search', 'searchHistory')->name('presensi.history.search');
+        Route::get('/izin', 'izin')->name('presensi.izin');
+        Route::get('/create/izin', 'createIzin')->name('presensi.create.izin');
+        Route::post('/store/izin', 'storeIzin')->name('presensi.store.izin');
     });
 
     // Profile
