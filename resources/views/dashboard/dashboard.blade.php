@@ -28,17 +28,17 @@
                 @php
                     // Daftar menu utama
                     $menus = [
-                        ['icon' => 'person-sharp', 'label' => 'Profil', 'class' => 'green'],
-                        ['icon' => 'calendar-number', 'label' => 'Cuti', 'class' => 'danger'],
-                        ['icon' => 'document-text', 'label' => 'Histori', 'class' => 'warning'],
-                        ['icon' => 'location', 'label' => 'Lokasi', 'class' => 'orange'],
+                        ['icon' => 'person-sharp', 'label' => 'Profil', 'class' => 'green', 'href' => route('profile')],
+                        ['icon' => 'calendar-number', 'label' => 'Cuti', 'class' => 'danger', 'href' => '#cuti'],
+                        ['icon' => 'document-text', 'label' => 'History', 'class' => 'warning', 'href' => route('presensi.history')],
+                        ['icon' => 'location', 'label' => 'Lokasi', 'class' => 'orange', 'href' => '#lokasi'],
                     ];
                 @endphp
 
                 @foreach ($menus as $menu)
                     <div class="item-menu text-center">
                         <div class="menu-icon">
-                            <a href="#" class="{{ $menu['class'] }}" style="font-size: 40px;">
+                            <a href="{{ $menu['href'] }}" class="{{ $menu['class'] }}" style="font-size: 40px;">
                                 <ion-icon name="{{ $menu['icon'] }}"></ion-icon>
                             </a>
                         </div>

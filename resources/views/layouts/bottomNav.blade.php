@@ -25,7 +25,7 @@
     </a>
 
     <!-- Permission Menu -->
-    <a href="#" class="item">
+    <a href="{{ route('presensi.izin') }}" class="item {{ Route::is('presensi.izin') ? 'active' : '' }}">
         <div class="col">
             <ion-icon name="document-text-outline" role="img" class="md hydrated"
                 aria-label="document text outline"></ion-icon>
