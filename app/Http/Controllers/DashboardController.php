@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PengajuanIzin;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -53,6 +55,14 @@ class DashboardController extends Controller
             ->whereYear('tanggal_presensi', $currentYear)
             ->first();
 
+        // Ambil rekap presensi: total izin
+        $recapIzin = PengajuanIzin::selectRaw('SUM(IF(status = "i", 1, 0)) as totalIzin, SUM(IF(status = "s", 1, 0)) as totalSakit')
+            ->where('nik', $nik)
+            ->whereMonth('tanggal_izin', $currentMonth)
+            ->whereYear('tanggal_izin', $currentYear)
+            ->where('status_approved', 1)
+            ->first();
+
         // Kirim semua data ke tampilan dashboard
         return view('dashboard.dashboard', [
             'fullName' => $fullName,
@@ -63,6 +73,7 @@ class DashboardController extends Controller
             'monthName' => $monthName,
             'currentYear' => $currentYear,
             'recapPresention' => $recapPresention,
+            'recapIzin' => $recapIzin,
         ]);
     }
 }

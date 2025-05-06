@@ -29,7 +29,7 @@
                     // Daftar menu utama
                     $menus = [
                         ['icon' => 'person-sharp', 'label' => 'Profil', 'class' => 'green', 'href' => route('profile')],
-                        ['icon' => 'calendar-number', 'label' => 'Cuti', 'class' => 'danger', 'href' => '#cuti'],
+                        ['icon' => 'calendar-number', 'label' => 'Cuti', 'class' => 'danger', 'href' => route('presensi.izin')],
                         ['icon' => 'document-text', 'label' => 'History', 'class' => 'warning', 'href' => route('presensi.history')],
                         ['icon' => 'location', 'label' => 'Lokasi', 'class' => 'orange', 'href' => '#lokasi'],
                     ];
@@ -115,8 +115,8 @@
                 // Data statis, sebaiknya diubah ke variabel dinamis di controller
                 $rekapData = [
                     ['count' => $recapPresention->totalPresence, 'icon' => 'accessibility-outline', 'label' => 'Hadir', 'color' => 'text-primary'],
-                    ['count' => 10, 'icon' => 'newspaper-outline', 'label' => 'Izin', 'color' => 'text-success'],
-                    ['count' => 10, 'icon' => 'medkit-outline', 'label' => 'Sakit', 'color' => 'text-warning'],
+                    ['count' => $recapIzin->totalIzin, 'icon' => 'newspaper-outline', 'label' => 'Izin', 'color' => 'text-success'],
+                    ['count' => $recapIzin->totalSakit, 'icon' => 'medkit-outline', 'label' => 'Sakit', 'color' => 'text-warning'],
                     ['count' => $recapPresention->totalLate, 'icon' => 'alarm-outline', 'label' => 'Telat', 'color' => 'text-danger'],
                 ];
             @endphp
