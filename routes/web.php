@@ -3,8 +3,17 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\PresensiController;
 use App\Http\Controllers\ProfileController;
+
+Route::middleware(['guest:user'])->group(function () {
+    Route::get('/admin', function () {
+        return view('admin.auth.login');
+    })->name('login.admin');
+});
+
+Route::get('/admin/dashboard', [AdminDashboardController::class, 'index']);
 
 // Route untuk user yang belum login (guest)
 Route::middleware(['guest:karyawan'])->group(function () {
