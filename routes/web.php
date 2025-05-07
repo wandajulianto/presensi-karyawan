@@ -6,7 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\PresensiController;
 use App\Http\Controllers\ProfileController;
-
+use App\Http\Controllers\Admin\DataMasterController;
 Route::middleware(['guest'])->group(function () {
     Route::get('/', function () {
         return view('auth.login');
@@ -26,6 +26,8 @@ Route::middleware('auth:user')->group(function () {
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard.admin');
 
     Route::get('/admin/logout', [AuthController::class, 'logout'])->name('logout.admin');
+
+    Route::get('/admin/data-master/karyawan', [DataMasterController::class, 'index'])->name('data-master.karyawan');
 });
 
 // Route untuk user yang sudah login (authenticated)

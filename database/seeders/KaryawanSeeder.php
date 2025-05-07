@@ -24,10 +24,26 @@ class KaryawanSeeder extends Seeder
             ],
             [
                 'nik' => 67890,
-                'nama_lengkap' => 'Dewi Lestari',
+                'nama_lengkap' => 'Anggia Putri',
                 'jabatan' => 'Staff',
                 'no_hp' => '081298765432',
                 'password' => bcrypt('password2'),
+                'remember_token' => null,
+            ],
+            [
+                'nik' => 110010,
+                'nama_lengkap' => 'Meisya',
+                'jabatan' => 'Staff',
+                'no_hp' => '081298765412',
+                'password' => bcrypt('password3'),
+                'remember_token' => null,
+            ],
+            [
+                'nik' => 112233,
+                'nama_lengkap' => 'Sarmidi',
+                'jabatan' => 'Staff',
+                'no_hp' => '081297865412',
+                'password' => bcrypt('password4'),
                 'remember_token' => null,
             ],
         ]);

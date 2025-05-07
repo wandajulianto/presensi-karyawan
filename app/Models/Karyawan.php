@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\PengajuanIzin;
+use App\Models\Departemen;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Karyawan extends Authenticatable
 {
@@ -28,6 +30,8 @@ class Karyawan extends Authenticatable
         'nama_lengkap',
         'jabatan',
         'no_hp',
+        'foto',
+        'kode_departemen',
         'password',
     ];
 
@@ -45,6 +49,11 @@ class Karyawan extends Authenticatable
     {
         return $this->hasMany(pengajuanIzin::class, 'nik', 'nik');
     }
+
+    public function departemen(): BelongsTo
+{
+    return $this->belongsTo(Departemen::class, 'kode_departemen', 'kode_departemen');
+}
 
     /**
      * Konversi tipe atribut.
