@@ -41,14 +41,14 @@ return [
             'provider' => 'users',
         ],
 
-        'karyawan' => [
-            'driver' => 'session',
-            'provider' => 'karyawans',
-        ],
-
         'user' => [
             'driver' => 'session',
             'provider' => 'users',
+        ],
+
+        'karyawan' => [
+            'driver' => 'session',
+            'provider' => 'karyawans',
         ],
     ],
 
