@@ -7,21 +7,25 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\PresensiController;
 use App\Http\Controllers\ProfileController;
 
-Route::middleware(['guest:user'])->group(function () {
+Route::middleware(['guest'])->group(function () {
+    Route::get('/', function () {
+        return view('auth.login');
+    })->name('login');
+
     Route::get('/admin', function () {
         return view('admin.auth.login');
     })->name('login.admin');
-});
-
-Route::get('/admin/dashboard', [AdminDashboardController::class, 'index']);
-
-// Route untuk user yang belum login (guest)
-Route::middleware(['guest:karyawan'])->group(function () {
-    Route::get('/', function () {
-        return view('auth.login');
-    })->name('login'); // Form login
 
     Route::post('/login', [AuthController::class, 'login'])->name('login.process');
+    
+    Route::post('/login/admin', [AuthController::class, 'loginAdmin'])->name('login.process.admin');
+});
+
+Route::middleware('auth:user')->group(function () {
+    // Admin dashboard
+    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard.admin');
+
+    Route::get('/admin/logout', [AuthController::class, 'logout'])->name('logout.admin');
 });
 
 // Route untuk user yang sudah login (authenticated)
