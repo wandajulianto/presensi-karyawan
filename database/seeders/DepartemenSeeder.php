@@ -33,6 +33,18 @@ class DepartemenSeeder extends Seeder
                 'nama_departemen' => 'Operations',
                 'created_at' => now(),
                 'updated_at' => now()
+            ],
+            [
+                'kode_departemen' => 'MKT',
+                'nama_departemen' => 'Marketing',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
+                'kode_departemen' => 'PRC',
+                'nama_departemen' => 'Procurement',
+                'created_at' => now(),
+                'updated_at' => now()
             ]
         ]);
     }
