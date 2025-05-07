@@ -22,7 +22,39 @@
           <div class="card">
             <div class="card-body">
               <div class="table-responsive">
-                <table class="table table-vcenter table-striped">
+                <form action="{{ route('data-master.karyawan') }}" method="GET">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <input type="text" class="form-control" name="nama_lengkap" value="{{ request('nama_lengkap') }}" placeholder="Cari Karyawan">
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <select name="departemen" id="departemen" class="form-select">
+                          <option value="">- Pilih Departemen -</option>
+                          <option value="null" {{ request('departemen') == 'null' ? 'selected' : '' }}>
+                            (Tanpa Departemen)
+                          </option>
+                          @foreach ($departemens as $departemen)
+                            <option value="{{ $departemen->kode_departemen }}" {{ request('departemen') == $departemen->kode_departemen ? 'selected' : '' }}>
+                              {{ $departemen->nama_departemen }}
+                            </option>
+                          @endforeach
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                      <div class="form-group">
+                        <button type="submit" class="btn btn-primary">
+                          <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+                          Cari
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+                <table class="table table-vcenter table-striped mt-3">
                   <thead>
                     <tr>
                       <th>No</th>
@@ -44,17 +76,20 @@
                           : asset('assets/img/avatar1.jpg');
                       @endphp
                       <tr>
-                        <td>{{ $loop->iteration }}</td>
+                        <td>{{ $karyawans->firstItem() + $loop->index }}</td>
                         <td>{{ $karyawan->nik }}</td>
                         <td>{{ $karyawan->nama_lengkap }}</td>
                         <td>{{ $karyawan->jabatan }}</td>
                         <td>{{ $karyawan->no_hp }}</td>
                         <td><img src="{{ $foto }}" alt="Foto Karyawan" class="avatar w-10 h-10"></td>
-                        <td>{{ $karyawan->nama_departemen }}</td>
+                        <td>{{ $karyawan->departemen->nama_departemen ?? 'Tidak Ada Departemen' }}</td>
                       </tr>
                     @endforeach
                   </tbody>
                 </table>
+                <div class="d-flex justify-content-center mt-3">
+                  {{ $karyawans->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
+                </div>
               </div>
             </div>
           </div>
