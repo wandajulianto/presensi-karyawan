@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notifiable;
 use App\Models\PengajuanIzin;
 use App\Models\Departemen;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Model;
 
 class Karyawan extends Authenticatable
 {
@@ -19,6 +20,7 @@ class Karyawan extends Authenticatable
     protected $primaryKey = 'nik';
     public $incrementing = false;
     protected $keyType = 'int';
+    public $timestamps = false;
 
     /**
      * Atribut yang dapat diisi secara massal.
@@ -51,9 +53,9 @@ class Karyawan extends Authenticatable
     }
 
     public function departemen(): BelongsTo
-{
-    return $this->belongsTo(Departemen::class, 'kode_departemen', 'kode_departemen');
-}
+    {
+        return $this->belongsTo(Departemen::class, 'kode_departemen', 'kode_departemen');
+    }
 
     /**
      * Konversi tipe atribut.

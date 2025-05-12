@@ -28,6 +28,8 @@ Route::middleware('auth:user')->group(function () {
     Route::get('/admin/logout', [AuthController::class, 'logout'])->name('logout.admin');
 
     Route::get('/admin/data-master/karyawan', [DataMasterController::class, 'index'])->name('data-master.karyawan');
+    Route::post('/admin/data-master/karyawan/store', [DataMasterController::class, 'store'])->name('data-master.karyawan.store');
+    Route::get('/admin/data-master/karyawan/create', [DataMasterController::class, 'create'])->name('data-master.karyawan.create');
 });
 
 // Route untuk user yang sudah login (authenticated)
