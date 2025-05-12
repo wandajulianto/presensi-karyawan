@@ -6,7 +6,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\PresensiController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Admin\DataMasterController;
+use App\Http\Controllers\Admin\DataMaster\KaryawanController;
+
 Route::middleware(['guest'])->group(function () {
     Route::get('/', function () {
         return view('auth.login');
@@ -27,9 +28,12 @@ Route::middleware('auth:user')->group(function () {
 
     Route::get('/admin/logout', [AuthController::class, 'logout'])->name('logout.admin');
 
-    Route::get('/admin/data-master/karyawan', [DataMasterController::class, 'index'])->name('data-master.karyawan');
-    Route::post('/admin/data-master/karyawan/store', [DataMasterController::class, 'store'])->name('data-master.karyawan.store');
-    Route::get('/admin/data-master/karyawan/create', [DataMasterController::class, 'create'])->name('data-master.karyawan.create');
+    Route::get('/admin/data-master/karyawan', [KaryawanController::class, 'index'])->name('data-master.karyawan');
+    Route::post('/admin/data-master/karyawan/store', [KaryawanController::class, 'store'])->name('data-master.karyawan.store');
+    Route::get('/admin/data-master/karyawan/create', [KaryawanController::class, 'create'])->name('data-master.karyawan.create');
+    Route::get('/admin/data-master/karyawan/{nik}/edit', [KaryawanController::class, 'edit'])->name('data-master.karyawan.edit');
+    Route::put('/admin/data-master/karyawan/{nik}', [KaryawanController::class, 'update'])->name('data-master.karyawan.update');
+    Route::delete('/admin/data-master/karyawan/{nik}', [KaryawanController::class, 'delete'])->name('data-master.karyawan.delete');
 });
 
 // Route untuk user yang sudah login (authenticated)
