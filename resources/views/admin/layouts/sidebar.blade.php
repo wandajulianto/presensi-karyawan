@@ -162,7 +162,14 @@
             <div class="dropdown-menu-columns">
               <div class="dropdown-menu-column">
                 <a class="dropdown-item" href="{{ route('data-master.karyawan') }}">
-                  Data Karyawan
+                  Karyawan
+                </a>
+              </div>
+            </div>
+            <div class="dropdown-menu-columns">
+              <div class="dropdown-menu-column">
+                <a class="dropdown-item" href="{{ route('data-master.departemen') }}">
+                  Departemen
                 </a>
               </div>
             </div>

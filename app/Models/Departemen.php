@@ -20,7 +20,7 @@ class Departemen extends Model
         'nama_departemen'
     ];
 
-    public function karyawans(): HasMany
+    public function karyawan(): HasMany
     {
         return $this->hasMany(Karyawan::class, 'kode_departemen', 'kode_departemen');
     }
