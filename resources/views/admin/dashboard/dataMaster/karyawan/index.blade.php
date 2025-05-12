@@ -125,6 +125,16 @@
                         <td>{{ $karyawan->no_hp }}</td>
                         <td><img src="{{ $foto }}" alt="Foto Karyawan" class="avatar w-10 h-10"></td>
                         <td>{{ $karyawan->departemen->nama_departemen ?? 'Tidak Ada Departemen' }}</td>
+                        <td>
+                          <a href="{{ route('data-master.karyawan.edit', $karyawan->nik) }}" class="btn btn-warning">
+                            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-edit"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg>
+                            Edit
+                          </a>
+                          <button type="button" class="btn btn-danger btn-delete text-2xl" data-nik="{{ $karyawan->nik }}" data-nama="{{ $karyawan->nama_lengkap }}">
+                            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-trash"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                            Hapus
+                          </button>
+                        </td>
                       </tr>
                     @endforeach
                   </tbody>
@@ -142,21 +152,52 @@
 @endsection
 
 @push('myScript')
-  <script>
-    $(function() {
-      $('#karyawanForm').submit(function(e) {
-        let nik = $('#nik').val();
-        let nama_lengkap = $('#nama_lengkap').val();
-        let jabatan = $('#jabatan').val();
-        let no_hp = $('#no_hp').val();
-        let kode_departemen = $('#kode_departemen').val();
-
-        if (nik == '') {
-          alert('NIK tidak boleh kosong!');
-          $('#nik').focus();
-          return false;
-        }
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Konfirmasi delete
+    const deleteButtons = document.querySelectorAll('.btn-delete');
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const nik = this.dataset.nik;
+        const nama = this.dataset.nama;
+            
+        Swal.fire({
+          title: 'Konfirmasi Hapus',
+          text: `Apakah Anda yakin ingin menghapus data karyawan ${nama}?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#3085d6',
+          confirmButtonText: 'Ya, Hapus!',
+          cancelButtonText: 'Batal'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Buat form delete dinamis
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/data-master/karyawan/${nik}`;
+                    
+            // Tambahkan CSRF token
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = '_token';
+            csrf.value = '{{ csrf_token() }}';
+            form.appendChild(csrf);
+                    
+            // Tambahkan method spoofing untuk DELETE
+            const method = document.createElement('input');
+            method.type = 'hidden';
+            method.name = '_method';
+            method.value = 'DELETE';
+            form.appendChild(method);
+                    
+            // Submit form
+            document.body.appendChild(form);
+            form.submit();
+          }
+        });
       });
     });
-  </script>
+  });
+</script>
 @endpush
