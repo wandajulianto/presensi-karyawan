@@ -1,11 +1,15 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\PresensiController;
 use App\Http\Controllers\ProfileController;
+
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\MonitorPresensiController;
+
 use App\Http\Controllers\Admin\DataMaster\KaryawanController;
 use App\Http\Controllers\Admin\DataMaster\DepartemenController;
 
@@ -27,6 +31,11 @@ Route::middleware('auth:user')->group(function () {
     // Admin dashboard
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard.admin');
 
+    // Monitoring Presensi
+    Route::get('/admin/monitoring-presensi', [MonitorPresensiController::class, 'index'])->name('dashboard.admin.monitoring-presensi');
+    Route::get('/admin/monitoring-presensi/export-keterlambatan', [MonitorPresensiController::class, 'exportKeterlambatan'])->name('dashboard.admin.monitoring-presensi.export-keterlambatan');
+
+    // Logout
     Route::get('/admin/logout', [AuthController::class, 'logout'])->name('logout.admin');
 
     // Data Master Karyawan
@@ -42,6 +51,7 @@ Route::middleware('auth:user')->group(function () {
             Route::get('/', 'index')->name('data-master.karyawan');
         });
 
+    // Data Master Departemen
     Route::controller(DepartemenController::class)
         ->prefix('admin/data-master/departemen')
         ->group(function () {
