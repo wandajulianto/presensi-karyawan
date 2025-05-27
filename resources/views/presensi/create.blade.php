@@ -28,6 +28,24 @@
         #map {
             height: 250px;
         }
+
+        /* Custom marker styling */
+        .custom-user-marker,
+        .custom-office-marker {
+            border: none !important;
+            background: transparent !important;
+        }
+        
+        .custom-user-marker div,
+        .custom-office-marker div {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .custom-user-marker div:hover,
+        .custom-office-marker div:hover {
+            transform: scale(1.1);
+        }
     </style>
 
     <!-- Leaflet CSS and JS for maps -->
@@ -85,6 +103,9 @@
         // Get location input element
         const locationInput = document.getElementById('location');
 
+        // Data kantor dari backend
+        const kantorData = @json($kantor);
+
         // Check if geolocation is available
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
@@ -109,16 +130,43 @@
                 attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(map);
 
-            // Add marker for current position
-            const marker = L.marker([lat, long]).addTo(map);
+            // Custom icon untuk lokasi user
+            const userIcon = L.divIcon({
+                html: '<div style="background-color: #3b82f6; color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">📍</div>',
+                iconSize: [25, 25],
+                className: 'custom-user-marker'
+            });
 
-            // Add circle for office radius (hardcoded office location)
-            const officeCircle = L.circle([-7.33351589751558, 108.22279680492574], {
-                color: 'red',
-                fillColor: '#f03',
-                fillOpacity: 0.5,
-                radius: 20
-            }).addTo(map);
+            // Add marker for current position dengan custom icon
+            const userMarker = L.marker([lat, long], {icon: userIcon}).addTo(map)
+                .bindPopup('📍 Lokasi Anda Saat Ini');
+
+            // Add circle for office radius and marker using data from database
+            if (kantorData) {
+                // Circle radius kantor
+                const officeCircle = L.circle([kantorData.latitude, kantorData.longitude], {
+                    color: '#ef4444',
+                    fillColor: '#ef4444',
+                    fillOpacity: 0.2,
+                    radius: kantorData.radius_meter,
+                    weight: 2
+                }).addTo(map);
+
+                // Custom icon untuk kantor
+                const officeIcon = L.divIcon({
+                    html: '<div style="background-color: #059669; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">🏢</div>',
+                    iconSize: [30, 30],
+                    className: 'custom-office-marker'
+                });
+
+                // Add marker for office location dengan custom icon
+                const officeMarker = L.marker([kantorData.latitude, kantorData.longitude], {icon: officeIcon}).addTo(map)
+                    .bindPopup(`🏢 ${kantorData.nama_kantor}<br>${kantorData.alamat}<br><small>Radius: ${kantorData.radius_meter}m</small>`);
+
+                // Auto fit bounds to show both markers
+                const group = new L.featureGroup([userMarker, officeMarker]);
+                map.fitBounds(group.getBounds().pad(0.2));
+            }
         }
 
         /**
