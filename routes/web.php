@@ -13,6 +13,8 @@ use App\Http\Controllers\Admin\MonitorPresensiController;
 use App\Http\Controllers\Admin\DataMaster\KaryawanController;
 use App\Http\Controllers\Admin\DataMaster\DepartemenController;
 
+use App\Http\Controllers\Admin\Laporan\LaporanPresensiController;
+
 Route::middleware(['guest'])->group(function () {
     Route::get('/', function () {
         return view('auth.login');
@@ -30,11 +32,7 @@ Route::middleware(['guest'])->group(function () {
 Route::middleware('auth:user')->group(function () {
     // Admin dashboard
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard.admin');
-
-    // Monitoring Presensi
-    Route::get('/admin/monitoring-presensi', [MonitorPresensiController::class, 'index'])->name('dashboard.admin.monitoring-presensi');
-    Route::get('/admin/monitoring-presensi/export-keterlambatan', [MonitorPresensiController::class, 'exportKeterlambatan'])->name('dashboard.admin.monitoring-presensi.export-keterlambatan');
-
+    
     // Logout
     Route::get('/admin/logout', [AuthController::class, 'logout'])->name('logout.admin');
 
@@ -62,6 +60,24 @@ Route::middleware('auth:user')->group(function () {
             Route::delete('/{kode_departemen}', 'delete')->name('data-master.departemen.delete');
 
             Route::get('/', 'index')->name('data-master.departemen');
+        });
+
+    // Monitoring Presensi
+    Route::controller(MonitorPresensiController::class)
+        ->prefix('admin/monitoring-presensi')
+        ->group(function () {
+            Route::get('/', 'index')->name('dashboard.admin.monitoring-presensi');
+            Route::get('/export-keterlambatan', 'exportKeterlambatan')->name('dashboard.admin.monitoring-presensi.export-keterlambatan');
+        });
+
+    // Laporan Presensi
+    Route::controller(LaporanPresensiController::class)
+        ->prefix('admin/laporan/presensi')
+        ->group(function () {
+            Route::get('/', 'index')->name('dashboard.admin.laporan-presensi');
+            Route::get('/export', 'export')->name('dashboard.admin.laporan-presensi.export');
+            Route::get('/export-keterlambatan', 'exportKeterlambatan')->name('dashboard.admin.laporan-presensi.rekap');
+            Route::get('/cetak/{nik}', 'cetakPerKaryawan')->name('dashboard.admin.laporan-presensi.cetak');
         });
 });
 
