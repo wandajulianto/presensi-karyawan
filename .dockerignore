@@ -1,0 +1,53 @@
+# Version control
+.git
+.gitignore
+
+# Dependencies
+node_modules
+vendor
+
+# Environment files
+.env
+.env.*
+
+# Logs
+*.log
+storage/logs/*
+
+# Cache files
+bootstrap/cache/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+
+# Testing
+tests
+.phpunit.result.cache
+phpunit.xml
+
+# Development
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Documentation
+README.md
+*.md
+
+# Backup files
+*.backup
+*.bak
+
+# Temporary files
+tmp/
+temp/ 
