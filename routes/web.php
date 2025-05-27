@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\DataMaster\KaryawanController;
 use App\Http\Controllers\Admin\DataMaster\DepartemenController;
 
 use App\Http\Controllers\Admin\Laporan\LaporanPresensiController;
+use App\Http\Controllers\Admin\PengajuanIzinController;
 
 Route::middleware(['guest'])->group(function () {
     Route::get('/', function () {
@@ -94,6 +95,22 @@ Route::middleware('auth:user')->group(function () {
             Route::delete('/{kantor}', 'destroy')->name('admin.kantor.destroy');
             Route::patch('/{kantor}/set-active', 'setActive')->name('admin.kantor.set-active');
             Route::post('/geocode', 'geocode')->name('admin.kantor.geocode');
+        });
+
+    // Pengajuan Izin routes
+    Route::controller(PengajuanIzinController::class)
+        ->prefix('admin/pengajuan-izin')
+        ->group(function () {
+            Route::get('/', 'index')->name('admin.pengajuan-izin.index');
+            Route::get('/create', 'create')->name('admin.pengajuan-izin.create');
+            Route::get('/export/csv', 'export')->name('admin.pengajuan-izin.export');
+            Route::post('/', 'store')->name('admin.pengajuan-izin.store');
+            Route::get('/{pengajuanIzin}', 'show')->name('admin.pengajuan-izin.show');
+            Route::get('/{pengajuanIzin}/edit', 'edit')->name('admin.pengajuan-izin.edit');
+            Route::put('/{pengajuanIzin}', 'update')->name('admin.pengajuan-izin.update');
+            Route::delete('/{pengajuanIzin}', 'destroy')->name('admin.pengajuan-izin.destroy');
+            Route::patch('/{pengajuanIzin}/approve', 'approve')->name('admin.pengajuan-izin.approve');
+            Route::patch('/{pengajuanIzin}/reject', 'reject')->name('admin.pengajuan-izin.reject');
         });
 });
 
