@@ -200,4 +200,11 @@
 <!-- Include Leaflet JavaScript -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="{{ asset('assets/js/monitoring-presensi.js') }}"></script>
+
+<script>
+// Set data kantor untuk JavaScript
+@if($kantor)
+  setKantorData(@json($kantor));
+@endif
+</script>
 @endpush

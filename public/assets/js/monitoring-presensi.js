@@ -1,5 +1,6 @@
 let map;
 let markerMasuk, markerKeluar;
+let kantorData = null; // Will be set from backend
 
 $(document).ready(function() {
   // Inisialisasi flatpickr
@@ -9,6 +10,11 @@ $(document).ready(function() {
     locale: "id"
   });
 });
+
+// Function to set kantor data from backend
+function setKantorData(data) {
+  kantorData = data;
+}
 
 function showLokasiModal(nama, lokasiMasuk, lokasiKeluar, tanggal, jamMasuk, jamKeluar) {
   // Set informasi karyawan
@@ -44,9 +50,18 @@ function initMap(lokasiMasuk, lokasiKeluar) {
     map.remove();
   }
 
-  // Lokasi kantor sebagai center default
-  const kantorLat = -7.33351589751558;
-  const kantorLng = 108.22279680492574;
+  // Lokasi kantor dari database atau fallback ke koordinat default
+  let kantorLat = -7.33351589751558;
+  let kantorLng = 108.22279680492574;
+  let kantorNama = 'Kantor Pusat';
+  let kantorAlamat = 'Lokasi Kantor';
+
+  if (kantorData) {
+    kantorLat = parseFloat(kantorData.latitude);
+    kantorLng = parseFloat(kantorData.longitude);
+    kantorNama = kantorData.nama_kantor;
+    kantorAlamat = kantorData.alamat;
+  }
 
   // Tentukan center peta
   let centerLat = kantorLat;
@@ -75,7 +90,7 @@ function initMap(lokasiMasuk, lokasiKeluar) {
 
   L.marker([kantorLat, kantorLng], {icon: kantorIcon})
     .addTo(map)
-    .bindPopup('<b>📍 Lokasi Kantor</b><br>Titik Referensi Absensi')
+    .bindPopup(`<b>📍 ${kantorNama}</b><br>${kantorAlamat}`)
     .openPopup();
 
   // Marker lokasi masuk

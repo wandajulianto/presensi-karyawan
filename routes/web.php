@@ -9,6 +9,7 @@ use App\Http\Controllers\ProfileController;
 
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\MonitorPresensiController;
+use App\Http\Controllers\Admin\KantorController;
 
 use App\Http\Controllers\Admin\DataMaster\KaryawanController;
 use App\Http\Controllers\Admin\DataMaster\DepartemenController;
@@ -79,6 +80,20 @@ Route::middleware('auth:user')->group(function () {
             Route::get('/export-rekap', 'exportRekap')->name('dashboard.admin.laporan-presensi.export-rekap');
             Route::get('/export-keterlambatan', 'exportKeterlambatan')->name('dashboard.admin.laporan-presensi.rekap');
             Route::get('/cetak/{nik}', 'cetakPerKaryawan')->name('dashboard.admin.laporan-presensi.cetak');
+        });
+
+    // Konfigurasi Kantor
+    Route::controller(KantorController::class)
+        ->prefix('admin/konfigurasi/kantor')
+        ->group(function () {
+            Route::get('/', 'index')->name('admin.kantor.index');
+            Route::get('/create', 'create')->name('admin.kantor.create');
+            Route::post('/store', 'store')->name('admin.kantor.store');
+            Route::get('/{kantor}/edit', 'edit')->name('admin.kantor.edit');
+            Route::put('/{kantor}', 'update')->name('admin.kantor.update');
+            Route::delete('/{kantor}', 'destroy')->name('admin.kantor.destroy');
+            Route::patch('/{kantor}/set-active', 'setActive')->name('admin.kantor.set-active');
+            Route::post('/geocode', 'geocode')->name('admin.kantor.geocode');
         });
 });
 
