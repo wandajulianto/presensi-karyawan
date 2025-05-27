@@ -205,11 +205,181 @@ class LaporanPresensiController extends Controller
     }
 
     /**
-     * Halaman rekap presensi (untuk route kedua)
+     * Halaman rekap presensi per karyawan
      */
-    public function exportKeterlambatan()
+    public function exportKeterlambatan(Request $request)
     {
-        return view('admin.dashboard.laporan.rekap.index');
+        // Ambil data departemen untuk dropdown filter
+        $departemens = Departemen::orderBy('nama_departemen')->get();
+
+        // Jika tidak ada filter, hanya tampilkan form
+        if (!$request->anyFilled(['bulan', 'tahun', 'departemen'])) {
+            return view('admin.dashboard.laporan.rekap.index', compact('departemens'));
+        }
+
+        $bulan = $request->bulan;
+        $tahun = $request->tahun;
+
+        // Build query untuk rekap per karyawan
+        $query = DB::table('karyawan')
+            ->leftJoin('departemens', 'karyawan.kode_departemen', '=', 'departemens.kode_departemen')
+            ->leftJoin('presensi', 'karyawan.nik', '=', 'presensi.nik')
+            ->select(
+                'karyawan.nik',
+                'karyawan.nama_lengkap',
+                'departemens.nama_departemen',
+                DB::raw('COUNT(CASE WHEN presensi.tanggal_presensi IS NOT NULL THEN 1 END) as total_hadir'),
+                DB::raw('COUNT(CASE WHEN presensi.jam_masuk > "07:00:00" THEN 1 END) as total_terlambat')
+            );
+
+        // Filter berdasarkan bulan dan tahun jika ada
+        if ($bulan) {
+            $query->whereMonth('presensi.tanggal_presensi', $bulan);
+        }
+        if ($tahun) {
+            $query->whereYear('presensi.tanggal_presensi', $tahun);
+        }
+
+        // Filter berdasarkan departemen
+        if ($request->filled('departemen')) {
+            $query->where('departemens.kode_departemen', $request->departemen);
+        }
+
+        $rekap_karyawan = $query->groupBy('karyawan.nik', 'karyawan.nama_lengkap', 'departemens.nama_departemen')
+            ->orderBy('karyawan.nama_lengkap')
+            ->get();
+
+        // Hitung summary
+        $summary = $this->hitungSummaryRekap($rekap_karyawan, $bulan, $tahun);
+
+        return view('admin.dashboard.laporan.rekap.index', compact(
+            'departemens',
+            'rekap_karyawan',
+            'summary'
+        ));
+    }
+
+    /**
+     * Menghitung summary untuk rekap
+     */
+    private function hitungSummaryRekap($rekap_karyawan, $bulan, $tahun)
+    {
+        $total_karyawan = $rekap_karyawan->count();
+        $total_keterlambatan = $rekap_karyawan->sum('total_terlambat');
+        
+        // Hitung total hari kerja
+        $total_hari_kerja = 0;
+        if ($bulan && $tahun) {
+            $total_hari_kerja = $this->hitungHariKerja($bulan, $tahun);
+        }
+
+        // Hitung rata-rata kehadiran
+        $total_kehadiran = $rekap_karyawan->sum('total_hadir');
+        $rata_rata_kehadiran = $total_karyawan > 0 && $total_hari_kerja > 0 
+            ? round(($total_kehadiran / ($total_karyawan * $total_hari_kerja)) * 100, 1) 
+            : 0;
+
+        return [
+            'total_karyawan' => $total_karyawan,
+            'total_keterlambatan' => $total_keterlambatan,
+            'total_hari_kerja' => $total_hari_kerja,
+            'rata_rata_kehadiran' => $rata_rata_kehadiran
+        ];
+    }
+
+    /**
+     * Export rekap presensi ke CSV
+     */
+    public function exportRekap(Request $request)
+    {
+        // Build query yang sama dengan rekap
+        $query = DB::table('karyawan')
+            ->leftJoin('departemens', 'karyawan.kode_departemen', '=', 'departemens.kode_departemen')
+            ->leftJoin('presensi', 'karyawan.nik', '=', 'presensi.nik')
+            ->select(
+                'karyawan.nik',
+                'karyawan.nama_lengkap',
+                'departemens.nama_departemen',
+                DB::raw('COUNT(CASE WHEN presensi.tanggal_presensi IS NOT NULL THEN 1 END) as total_hadir'),
+                DB::raw('COUNT(CASE WHEN presensi.jam_masuk > "07:00:00" THEN 1 END) as total_terlambat')
+            );
+
+        // Terapkan filter
+        if ($request->filled('bulan')) {
+            $query->whereMonth('presensi.tanggal_presensi', $request->bulan);
+        }
+        if ($request->filled('tahun')) {
+            $query->whereYear('presensi.tanggal_presensi', $request->tahun);
+        }
+        if ($request->filled('departemen')) {
+            $query->where('departemens.kode_departemen', $request->departemen);
+        }
+
+        $rekap_karyawan = $query->groupBy('karyawan.nik', 'karyawan.nama_lengkap', 'departemens.nama_departemen')
+            ->orderBy('karyawan.nama_lengkap')
+            ->get();
+
+        // Hitung total hari kerja untuk persentase
+        $total_hari_kerja = 0;
+        if ($request->filled('bulan') && $request->filled('tahun')) {
+            $total_hari_kerja = $this->hitungHariKerja($request->bulan, $request->tahun);
+        }
+
+        // Set header untuk download CSV
+        $fileName = 'rekap_presensi_' . 
+                   ($request->bulan ? $request->bulan : 'semua') . '_' . 
+                   ($request->tahun ? $request->tahun : date('Y')) . '_' . 
+                   date('Y-m-d_H-i-s') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ];
+
+        $callback = function() use ($rekap_karyawan, $total_hari_kerja) {
+            $file = fopen('php://output', 'w');
+            
+            // Header CSV
+            fputcsv($file, [
+                'No',
+                'NIK',
+                'Nama Karyawan',
+                'Departemen',
+                'Total Hadir',
+                'Total Terlambat',
+                'Persentase Kehadiran (%)',
+                'Status Kehadiran'
+            ]);
+
+            // Data CSV
+            $no = 1;
+            foreach ($rekap_karyawan as $karyawan) {
+                $persentase = $total_hari_kerja > 0 ? round(($karyawan->total_hadir / $total_hari_kerja) * 100, 1) : 0;
+                
+                if ($persentase >= 90) {
+                    $status = 'Sangat Baik';
+                } elseif ($persentase >= 75) {
+                    $status = 'Baik';
+                } else {
+                    $status = 'Perlu Perhatian';
+                }
+                
+                fputcsv($file, [
+                    $no++,
+                    $karyawan->nik,
+                    $karyawan->nama_lengkap,
+                    $karyawan->nama_departemen ?? 'Tidak Ada Departemen',
+                    $karyawan->total_hadir,
+                    $karyawan->total_terlambat,
+                    $persentase,
+                    $status
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     /**
