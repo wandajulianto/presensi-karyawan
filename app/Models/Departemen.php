@@ -11,6 +11,7 @@ class Departemen extends Model
 {
     use HasFactory;
 
+    protected $table = 'departemens';
     protected $primaryKey = 'kode_departemen';
     public $incrementing = false;
     protected $keyType = 'string';
