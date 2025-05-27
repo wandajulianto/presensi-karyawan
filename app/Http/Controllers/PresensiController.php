@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PengajuanIzin;
+use App\Models\Kantor;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,11 +14,6 @@ use Carbon\Carbon;
 
 class PresensiController extends Controller
 {
-    // Koordinat kantor tetap sebagai konstanta class
-    private const OFFICE_LAT = -7.33351589751558;
-    private const OFFICE_LONG = 108.22279680492574;
-    private const MAX_DISTANCE_METERS = 20;
-
     /**
      * Menampilkan halaman presensi.
      * Mengecek apakah user sudah melakukan presensi hari ini.
@@ -34,7 +30,13 @@ class PresensiController extends Controller
             ->where('nik', $nik)
             ->exists();
 
-        return view('presensi.create', ['isAbsent' => $hasAbsentToday]);
+        // Ambil data kantor utama
+        $kantor = Kantor::getKantorUtama();
+
+        return view('presensi.create', [
+            'isAbsent' => $hasAbsentToday,
+            'kantor' => $kantor
+        ]);
     }
 
     /**
@@ -66,10 +68,17 @@ class PresensiController extends Controller
             }
 
             [$userLat, $userLong] = explode(',', $request->location);
-            $distance = $this->calculateDistanceFromOffice($userLat, $userLong);
+            
+            // Ambil data kantor dan validasi jarak
+            $kantor = Kantor::getKantorUtama();
+            if (!$kantor) {
+                return response("error|Data kantor tidak ditemukan, hubungi admin|");
+            }
 
-            if ($distance > self::MAX_DISTANCE_METERS) {
-                return response("error|Maaf, Anda berada di luar radius kantor. Jarak Anda {$distance} meter dari kantor|");
+            $distance = $kantor->hitungJarak($userLat, $userLong);
+
+            if (!$kantor->dalamRadius($userLat, $userLong)) {
+                return response("error|Maaf, Anda berada di luar radius kantor. Jarak Anda " . round($distance) . " meter dari kantor|");
             }
 
             // Cek apakah sudah absen hari ini dan tentukan status
@@ -173,21 +182,6 @@ class PresensiController extends Controller
     }
 
     /**
-     * Menghitung jarak dari kantor dalam meter
-     */
-    private function calculateDistanceFromOffice($userLat, $userLong)
-    {
-        $result = $this->calculateDistance(
-            self::OFFICE_LAT, 
-            self::OFFICE_LONG, 
-            $userLat, 
-            $userLong
-        );
-        
-        return round($result['meters']);
-    }
-
-    /**
      * Menyimpan gambar ke storage disk publik.
      * 
      * @param string $path
@@ -202,27 +196,6 @@ class PresensiController extends Controller
         }
 
         Log::info("Gambar presensi disimpan di: " . storage_path("app/public/{$path}"));
-    }
-
-    /**
-     * Menghitung jarak antara dua titik koordinat dalam meter.
-     * 
-     * @param float $lat1 Latitude titik pertama
-     * @param float $lon1 Longitude titik pertama
-     * @param float $lat2 Latitude titik kedua
-     * @param float $lon2 Longitude titik kedua
-     * @return array ['meters' => jarak dalam meter]
-     */
-    private function calculateDistance($lat1, $lon1, $lat2, $lon2): array
-    {
-        $theta = $lon1 - $lon2;
-        $angle = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +
-                 cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
-        $angle = acos(min(max($angle, -1), 1));
-        $miles = rad2deg($angle) * 60 * 1.1515;
-        $meters = $miles * 1.609344 * 1000;
-
-        return ['meters' => $meters];
     }
 
     /**

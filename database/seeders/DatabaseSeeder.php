@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             PengajuanIzinSeeder::class,
             PresensiSeeder::class,
             DepartemenSeeder::class,
+            KantorSeeder::class,
         ]);
     }
 }

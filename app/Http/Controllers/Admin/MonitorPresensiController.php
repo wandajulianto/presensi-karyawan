@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Presensi;
 use App\Models\Departemen;
+use App\Models\Kantor;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -63,13 +64,17 @@ class MonitorPresensiController extends Controller
 
         // Ambil data departemen untuk dropdown filter
         $departemens = Departemen::orderBy('nama_departemen')->get();
+        
+        // Ambil data kantor utama
+        $kantor = Kantor::getKantorUtama();
 
         return view('admin.dashboard.monitoringPresensi.index', compact(
             'presensis', 
             'departemens', 
             'totalJamKeterlambatan', 
             'jumlahKaryawanTerlambat',
-            'rataRataJamKeterlambatan'
+            'rataRataJamKeterlambatan',
+            'kantor'
         ));
     }
 
