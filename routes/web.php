@@ -76,6 +76,7 @@ Route::middleware('auth:user')->group(function () {
         ->group(function () {
             Route::get('/', 'index')->name('dashboard.admin.laporan-presensi');
             Route::get('/export', 'export')->name('dashboard.admin.laporan-presensi.export');
+            Route::get('/export-rekap', 'exportRekap')->name('dashboard.admin.laporan-presensi.export-rekap');
             Route::get('/export-keterlambatan', 'exportKeterlambatan')->name('dashboard.admin.laporan-presensi.rekap');
             Route::get('/cetak/{nik}', 'cetakPerKaryawan')->name('dashboard.admin.laporan-presensi.cetak');
         });
