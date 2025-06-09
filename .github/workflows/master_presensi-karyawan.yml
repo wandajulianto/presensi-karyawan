@@ -35,7 +35,7 @@ jobs:
 
       - name: Install and build frontend assets
         run: |
-          npm ci --only=production
+          npm ci
           npm run build
 
       - name: Create .env file
