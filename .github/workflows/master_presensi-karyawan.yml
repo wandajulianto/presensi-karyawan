@@ -46,7 +46,7 @@ jobs:
     - name: Make startup.sh executable
       run: chmod +x startup.sh
 
-    name: Login to Azure
+    - name: Login to Azure
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_D8173D1CCDED4776871213EF191D7C85 }}
