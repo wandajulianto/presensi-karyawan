@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -29,6 +30,34 @@ Route::middleware(['guest'])->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.process');
     
     Route::post('/login/admin', [AuthController::class, 'loginAdmin'])->name('login.process.admin');
+});
+
+// Deployment routes (protected by environment check)
+Route::middleware(['throttle:5,1'])->group(function () {
+    Route::post('/artisan/migrate', function () {
+        if (app()->environment('production')) {
+            try {
+                Artisan::call('migrate', ['--force' => true]);
+                Artisan::call('config:cache');
+                Artisan::call('route:cache');
+                Artisan::call('view:cache');
+                Artisan::call('storage:link');
+                return response()->json(['status' => 'success', 'message' => 'Deployment commands executed successfully']);
+            } catch (\Exception $e) {
+                return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            }
+        }
+        return response()->json(['status' => 'error', 'message' => 'Not in production environment'], 403);
+    });
+    
+    Route::get('/deploy/status', function () {
+        return response()->json([
+            'status' => 'ok',
+            'environment' => app()->environment(),
+            'timestamp' => now(),
+            'laravel_version' => app()->version()
+        ]);
+    });
 });
 
 Route::middleware('auth:user')->group(function () {

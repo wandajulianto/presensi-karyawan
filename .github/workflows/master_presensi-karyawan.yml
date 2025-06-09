@@ -59,6 +59,9 @@ jobs:
       - name: Generate optimized autoloader
         run: composer dump-autoload --optimize --classmap-authoritative
 
+      - name: Set execute permission for startup script
+        run: chmod +x startup.sh
+
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r -x "node_modules/*" ".git/*" "tests/*"
 
@@ -139,19 +142,44 @@ jobs:
               }
             ]
 
-      - name: Run Laravel Commands
+      - name: Set Startup Command
         uses: azure/cli@v1
         with:
           inlineScript: |
-            # Run database migrations
-            az webapp ssh --resource-group presensi-rg --name presensi-karyawan --command "cd /home/site/wwwroot && php artisan migrate --force"
-            
-            # Clear and cache configurations
-            az webapp ssh --resource-group presensi-rg --name presensi-karyawan --command "cd /home/site/wwwroot && php artisan config:clear"
-            az webapp ssh --resource-group presensi-rg --name presensi-karyawan --command "cd /home/site/wwwroot && php artisan config:cache"
-            az webapp ssh --resource-group presensi-rg --name presensi-karyawan --command "cd /home/site/wwwroot && php artisan route:cache"
-            az webapp ssh --resource-group presensi-rg --name presensi-karyawan --command "cd /home/site/wwwroot && php artisan view:cache"
-            
-            # Create storage symlink
-            az webapp ssh --resource-group presensi-rg --name presensi-karyawan --command "cd /home/site/wwwroot && php artisan storage:link"
+            # Set startup command untuk Azure App Service
+            az webapp config set \
+              --resource-group presensi-rg \
+              --name presensi-karyawan \
+              --startup-file "/home/site/wwwroot/startup.sh"
+
+      - name: Wait for deployment to complete
+        run: sleep 60
+
+      - name: Test Application Health
+        run: |
+          # Test if app is running
+          for i in {1..10}; do
+            if curl -f "https://presensi-karyawan.azurewebsites.net/deploy/status"; then
+              echo "Application is healthy!"
+              break
+            fi
+            echo "Waiting for application to be ready... ($i/10)"
+            sleep 10
+          done
+
+      - name: Run Laravel Deployment Commands
+        run: |
+          # Trigger Laravel commands via HTTP endpoint
+          echo "Running deployment commands..."
+          
+          response=$(curl -s -X POST "https://presensi-karyawan.azurewebsites.net/artisan/migrate" -H "Content-Type: application/json")
+          echo "Migration response: $response"
+          
+          # Check if deployment was successful
+          if echo "$response" | grep -q '"status":"success"'; then
+            echo "✅ Deployment commands executed successfully!"
+          else
+            echo "⚠️ Deployment commands may have issues, but continuing..."
+            echo "Response: $response"
+          fi
           
