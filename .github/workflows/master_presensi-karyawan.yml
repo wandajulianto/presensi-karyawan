@@ -45,7 +45,7 @@ jobs:
           echo "APP_KEY=${{ secrets.LARAVEL_APP_KEY }}" >> .env
           echo "APP_DEBUG=false" >> .env
           echo "APP_TIMEZONE=Asia/Jakarta" >> .env
-          echo "APP_URL=${{ secrets.APP_URL }}" >> .env
+          echo "APP_URL=https://presensi-karyawan-heg5badjhpb6e0gc.indonesiacentral-01.azurewebsites.net" >> .env
           echo "DB_CONNECTION=mysql" >> .env
           echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
           echo "DB_PORT=3306" >> .env
@@ -159,7 +159,7 @@ jobs:
         run: |
           # Test if app is running
           for i in {1..10}; do
-            if curl -f "https://presensi-karyawan.azurewebsites.net/deploy/status"; then
+            if curl -f "https://presensi-karyawan-heg5badjhpb6e0gc.indonesiacentral-01.azurewebsites.net/deploy/status"; then
               echo "Application is healthy!"
               break
             fi
@@ -172,7 +172,7 @@ jobs:
           # Trigger Laravel commands via HTTP endpoint
           echo "Running deployment commands..."
           
-          response=$(curl -s -X POST "https://presensi-karyawan.azurewebsites.net/artisan/migrate" -H "Content-Type: application/json")
+          response=$(curl -s -X POST "https://presensi-karyawan-heg5badjhpb6e0gc.indonesiacentral-01.azurewebsites.net/artisan/migrate" -H "Content-Type: application/json")
           echo "Migration response: $response"
           
           # Check if deployment was successful
