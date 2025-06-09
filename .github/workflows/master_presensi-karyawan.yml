@@ -47,11 +47,11 @@ jobs:
       run: chmod +x startup.sh
 
     - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_D8173D1CCDED4776871213EF191D7C85 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_8F12746D83FB4E559CD56E22355F7463 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_99CF1AFCA6414930947DA909F7A6B6BE }}
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_D8173D1CCDED4776871213EF191D7C85 }}
+        tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_8F12746D83FB4E559CD56E22355F7463 }}
+        subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_99CF1AFCA6414930947DA909F7A6B6BE }}
 
     - name: Upload to Azure App Service
       uses: azure/webapps-deploy@v3
