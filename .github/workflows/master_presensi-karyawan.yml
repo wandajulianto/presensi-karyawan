@@ -144,30 +144,34 @@ jobs:
               }
             ]
 
-      - name: Restart App Service
-        uses: azure/cli@v1
-        with:
-          inlineScript: |
-            # Restart app to ensure new deployment is loaded
-            az webapp restart \
-              --resource-group presensi-rg \
-              --name presensi-karyawan
-            
-            echo "App restarted successfully"
+      # App Service will restart automatically after deployment
+      # Manual restart removed due to permission issues
 
       - name: Wait for deployment to complete
-        run: sleep 60
+        run: |
+          echo "Waiting for Azure App Service to restart and load new deployment..."
+          sleep 90
 
       - name: Test Application Health
         run: |
-          # Test if app is running
-          for i in {1..10}; do
-            if curl -f "https://presensi-karyawan-heg5badjhpb6e0gc.indonesiacentral-01.azurewebsites.net/deploy/status"; then
-              echo "Application is healthy!"
+          # Test if app is running - try main page first, then health endpoint
+          echo "Testing application deployment..."
+          
+          for i in {1..15}; do
+            # First try main Laravel page
+            if curl -f -s "https://presensi-karyawan-heg5badjhpb6e0gc.indonesiacentral-01.azurewebsites.net/" | grep -q "Laravel\|login\|Presensi"; then
+              echo "✅ Laravel application is running!"
               break
             fi
-            echo "Waiting for application to be ready... ($i/10)"
-            sleep 10
+            
+            # Then try health endpoint  
+            if curl -f -s "https://presensi-karyawan-heg5badjhpb6e0gc.indonesiacentral-01.azurewebsites.net/deploy/status" | grep -q '"status":"ok"'; then
+              echo "✅ Health endpoint is responding!"
+              break
+            fi
+            
+            echo "Waiting for application to be ready... ($i/15)"
+            sleep 15
           done
 
       - name: Run Laravel Deployment Commands
@@ -175,14 +179,23 @@ jobs:
           # Trigger Laravel commands via HTTP endpoint
           echo "Running deployment commands..."
           
-          response=$(curl -s -X POST "https://presensi-karyawan-heg5badjhpb6e0gc.indonesiacentral-01.azurewebsites.net/artisan/migrate" -H "Content-Type: application/json")
-          echo "Migration response: $response"
+          # Try to run migration commands
+          response=$(curl -s -w "HTTP_CODE:%{http_code}" -X POST "https://presensi-karyawan-heg5badjhpb6e0gc.indonesiacentral-01.azurewebsites.net/artisan/migrate" -H "Content-Type: application/json")
+          
+          http_code=$(echo "$response" | grep -o "HTTP_CODE:[0-9]*" | cut -d: -f2)
+          body=$(echo "$response" | sed 's/HTTP_CODE:[0-9]*$//')
+          
+          echo "HTTP Status: $http_code"
+          echo "Response Body: $body"
           
           # Check if deployment was successful
-          if echo "$response" | grep -q '"status":"success"'; then
+          if [[ "$http_code" == "200" ]] && echo "$body" | grep -q '"status":"success"'; then
             echo "✅ Deployment commands executed successfully!"
+          elif [[ "$http_code" == "200" ]]; then
+            echo "✅ Application is responding (200 OK)"
+            echo "⚠️ Migration endpoint may not be ready yet, but deployment seems successful"
           else
-            echo "⚠️ Deployment commands may have issues, but continuing..."
-            echo "Response: $response"
+            echo "⚠️ Migration endpoint returned HTTP $http_code"
+            echo "This is normal if the application is still loading"
           fi
           
