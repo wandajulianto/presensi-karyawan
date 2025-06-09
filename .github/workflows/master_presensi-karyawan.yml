@@ -106,6 +106,7 @@ jobs:
           app-name: 'presensi-karyawan'
           slot-name: 'Production'
           package: .
+          startup-file: '/home/site/wwwroot/startup-azure.sh'
 
       - name: Configure App Settings
         uses: azure/appservice-settings@v1
