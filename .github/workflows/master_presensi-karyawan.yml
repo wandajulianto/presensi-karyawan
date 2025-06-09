@@ -142,15 +142,15 @@ jobs:
               }
             ]
 
-      - name: Set Startup Command
-        uses: azure/cli@v1
-        with:
-          inlineScript: |
-            # Set startup command untuk Azure App Service
-            az webapp config set \
-              --resource-group presensi-rg \
-              --name presensi-karyawan \
-              --startup-file "/home/site/wwwroot/startup.sh"
+      # Startup command disabled - using HTTP endpoints only for better control
+      # - name: Set Startup Command
+      #   uses: azure/cli@v1
+      #   with:
+      #     inlineScript: |
+      #       az webapp config set \
+      #         --resource-group presensi-rg \
+      #         --name presensi-karyawan \
+      #         --startup-file "/home/site/wwwroot/startup.sh"
 
       - name: Wait for deployment to complete
         run: sleep 60
