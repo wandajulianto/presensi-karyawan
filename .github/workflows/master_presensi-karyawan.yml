@@ -22,19 +22,45 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, gd, zip, bcmath
 
-      - name: Check if composer.json exists
-        id: check_files
-        uses: andstor/file-existence-action@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          files: 'composer.json'
+          node-version: '18'
+          cache: 'npm'
 
-      - name: Run composer install if composer.json exists
-        if: steps.check_files.outputs.files_exists == 'true'
-        run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-dev --optimize-autoloader
+
+      - name: Install and build frontend assets
+        run: |
+          npm ci --only=production
+          npm run build
+
+      - name: Create .env file
+        run: |
+          echo "APP_NAME=Presensi" >> .env
+          echo "APP_ENV=production" >> .env
+          echo "APP_KEY=${{ secrets.LARAVEL_APP_KEY }}" >> .env
+          echo "APP_DEBUG=false" >> .env
+          echo "APP_TIMEZONE=Asia/Jakarta" >> .env
+          echo "APP_URL=${{ secrets.APP_URL }}" >> .env
+          echo "DB_CONNECTION=mysql" >> .env
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "SESSION_DRIVER=database" >> .env
+          echo "CACHE_STORE=database" >> .env
+          echo "QUEUE_CONNECTION=database" >> .env
+
+      - name: Generate optimized autoloader
+        run: composer dump-autoload --optimize --classmap-authoritative
 
       - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+        run: zip release.zip ./* -r -x "node_modules/*" ".git/*" "tests/*"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -75,4 +101,57 @@ jobs:
           app-name: 'presensi-karyawan'
           slot-name: 'Production'
           package: .
+
+      - name: Configure App Settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: 'presensi-karyawan'
+          slot-name: 'Production'
+          app-settings-json: |
+            [
+              {
+                "name": "APP_ENV",
+                "value": "production"
+              },
+              {
+                "name": "APP_DEBUG", 
+                "value": "false"
+              },
+              {
+                "name": "APP_KEY",
+                "value": "${{ secrets.LARAVEL_APP_KEY }}"
+              },
+              {
+                "name": "DB_HOST",
+                "value": "${{ secrets.DB_HOST }}"
+              },
+              {
+                "name": "DB_DATABASE",
+                "value": "${{ secrets.DB_DATABASE }}"
+              },
+              {
+                "name": "DB_USERNAME", 
+                "value": "${{ secrets.DB_USERNAME }}"
+              },
+              {
+                "name": "DB_PASSWORD",
+                "value": "${{ secrets.DB_PASSWORD }}"
+              }
+            ]
+
+      - name: Run Laravel Commands
+        uses: azure/cli@v1
+        with:
+          inlineScript: |
+            # Run database migrations
+            az webapp ssh --resource-group presensi-rg --name presensi-karyawan --command "cd /home/site/wwwroot && php artisan migrate --force"
+            
+            # Clear and cache configurations
+            az webapp ssh --resource-group presensi-rg --name presensi-karyawan --command "cd /home/site/wwwroot && php artisan config:clear"
+            az webapp ssh --resource-group presensi-rg --name presensi-karyawan --command "cd /home/site/wwwroot && php artisan config:cache"
+            az webapp ssh --resource-group presensi-rg --name presensi-karyawan --command "cd /home/site/wwwroot && php artisan route:cache"
+            az webapp ssh --resource-group presensi-rg --name presensi-karyawan --command "cd /home/site/wwwroot && php artisan view:cache"
+            
+            # Create storage symlink
+            az webapp ssh --resource-group presensi-rg --name presensi-karyawan --command "cd /home/site/wwwroot && php artisan storage:link"
           
