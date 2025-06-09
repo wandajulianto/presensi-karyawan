@@ -63,7 +63,9 @@ jobs:
         run: chmod +x startup.sh
 
       - name: Zip artifact for deployment
-        run: zip release.zip ./* -r -x "node_modules/*" ".git/*" "tests/*"
+        run: |
+          # Include hidden files like .htaccess and exclude unnecessary folders
+          zip -r release.zip . -x "node_modules/*" ".git/*" "tests/*" "*.log" ".env.example"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -142,15 +144,16 @@ jobs:
               }
             ]
 
-      # Startup command disabled - using HTTP endpoints only for better control
-      # - name: Set Startup Command
-      #   uses: azure/cli@v1
-      #   with:
-      #     inlineScript: |
-      #       az webapp config set \
-      #         --resource-group presensi-rg \
-      #         --name presensi-karyawan \
-      #         --startup-file "/home/site/wwwroot/startup.sh"
+      - name: Restart App Service
+        uses: azure/cli@v1
+        with:
+          inlineScript: |
+            # Restart app to ensure new deployment is loaded
+            az webapp restart \
+              --resource-group presensi-rg \
+              --name presensi-karyawan
+            
+            echo "App restarted successfully"
 
       - name: Wait for deployment to complete
         run: sleep 60
