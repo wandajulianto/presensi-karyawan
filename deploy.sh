@@ -74,9 +74,33 @@ docker-compose down
 print_status "Building dan starting containers..."
 docker-compose up --build -d
 
+# Wait for containers to be ready
+print_status "Waiting for containers to be ready..."
+sleep 10
+
+# Check if app container is running
+print_status "Checking if app container is running..."
+if ! docker-compose ps | grep -q "presensi-app.*Up"; then
+    print_error "App container failed to start! Checking logs..."
+    docker-compose logs app
+    exit 1
+fi
+
 # Wait for database to be ready
 print_status "Waiting for database to be ready..."
-sleep 30
+for i in {1..30}; do
+    if docker-compose exec mysql mysql -u presensi_user -psecure_password_123 -e "SELECT 1" presensi >/dev/null 2>&1; then
+        print_status "Database is ready!"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        print_error "Database failed to start after 30 attempts"
+        docker-compose logs mysql
+        exit 1
+    fi
+    echo "Waiting for database... ($i/30)"
+    sleep 2
+done
 
 # Run database migration
 print_status "Running database migrations..."

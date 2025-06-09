@@ -1,0 +1,75 @@
+name: Deploy Laravel to Azure
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  AZURE_CONTAINER_REGISTRY: presensiapp
+  CONTAINER_NAME: presensi-laravel
+  RESOURCE_GROUP: presensi-rg
+  LOCATION: southeastasia
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v4
+
+    - name: 'Login to Azure'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: 'Login to Azure Container Registry'
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+
+    - name: 'Build and Push Docker Image'
+      run: |
+        docker build -t ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }} .
+        docker push ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }}
+
+    - name: 'Deploy to Azure Container Instances'
+      uses: azure/aci-deploy@v1
+      with:
+        resource-group: ${{ env.RESOURCE_GROUP }}
+        dns-name-label: presensi-app-${{ github.run_number }}
+        image: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }}
+        registry-login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io
+        registry-username: ${{ secrets.ACR_USERNAME }}
+        registry-password: ${{ secrets.ACR_PASSWORD }}
+        name: presensi-container
+        location: ${{ env.LOCATION }}
+        ports: 8000
+        cpu: 1
+        memory: 2
+        environment-variables: |
+          APP_ENV=production
+          APP_DEBUG=false
+          APP_KEY=${{ secrets.LARAVEL_APP_KEY }}
+          APP_URL=https://presensi-app-${{ github.run_number }}.${{ env.LOCATION }}.azurecontainer.io
+          DB_CONNECTION=mysql
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=3306
+          DB_DATABASE=${{ secrets.DB_DATABASE }}
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+
+    - name: 'Run Database Migrations'
+      run: |
+        # Wait for container to be ready
+        sleep 60
+        
+        # Run migrations via Azure CLI
+        az container exec \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --name presensi-container \
+          --exec-command "php artisan migrate --force" 
