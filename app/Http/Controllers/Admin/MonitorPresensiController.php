@@ -20,7 +20,7 @@ class MonitorPresensiController extends Controller
     {
         $query = Presensi::with(['karyawan.departemen'])
             ->select('presensi.*')
-            ->leftJoin('karyawan', 'presensi.nik', '=', 'karyawan.nik')
+            ->join('karyawan', 'presensi.nik', '=', 'karyawan.nik')
             ->leftJoin('departemens', 'karyawan.kode_departemen', '=', 'departemens.kode_departemen');
 
         // Filter berdasarkan tanggal
@@ -147,7 +147,7 @@ class MonitorPresensiController extends Controller
     {
         $query = Presensi::with(['karyawan.departemen'])
             ->select('presensi.*')
-            ->leftJoin('karyawan', 'presensi.nik', '=', 'karyawan.nik')
+            ->join('karyawan', 'presensi.nik', '=', 'karyawan.nik')
             ->leftJoin('departemens', 'karyawan.kode_departemen', '=', 'departemens.kode_departemen')
             ->where('presensi.jam_masuk', '>', '07:00:00'); // Hanya yang terlambat
 
@@ -252,7 +252,7 @@ class MonitorPresensiController extends Controller
     {
         $query = Presensi::with(['karyawan.departemen'])
             ->select('presensi.*')
-            ->leftJoin('karyawan', 'presensi.nik', '=', 'karyawan.nik')
+            ->join('karyawan', 'presensi.nik', '=', 'karyawan.nik')
             ->leftJoin('departemens', 'karyawan.kode_departemen', '=', 'departemens.kode_departemen')
             ->where('presensi.jam_masuk', '>', '07:00:00'); // Hanya yang terlambat
 
