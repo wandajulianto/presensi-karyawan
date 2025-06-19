@@ -6,12 +6,15 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Presensi;
 use App\Models\Departemen;
+use App\Models\KopSurat;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Traits\KopSuratTrait;
 
 class LaporanPresensiController extends Controller
 {
+    use KopSuratTrait;
     public function index(Request $request)
     {
         // Ambil data departemen untuk dropdown filter
@@ -153,10 +156,27 @@ class LaporanPresensiController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
         ];
 
-        $callback = function() use ($laporan_presensi) {
+        $callback = function() use ($laporan_presensi, $request) {
             $file = fopen('php://output', 'w');
             
-            // Header CSV
+            // Header CSV dengan Kop Surat
+            $kopSurat = KopSurat::getActive();
+            
+            fputcsv($file, ['LAPORAN PRESENSI KARYAWAN']);
+            fputcsv($file, [$kopSurat ? $kopSurat->nama_instansi : config('app.name', 'Nama Instansi')]);
+            fputcsv($file, [$kopSurat ? $kopSurat->alamat_instansi : 'Alamat Instansi']);
+            if ($kopSurat && $kopSurat->telepon_instansi) {
+                fputcsv($file, ['Telp: ' . $kopSurat->telepon_instansi]);
+            }
+            fputcsv($file, ['']);
+            fputcsv($file, ['Periode: ' . 
+                ($request->bulan ? Carbon::create()->month((int) $request->bulan)->translatedFormat('F') : 'Semua Bulan') . ' ' .
+                ($request->tahun ? $request->tahun : date('Y'))
+            ]);
+            fputcsv($file, ['Tanggal Cetak: ' . Carbon::now()->translatedFormat('d F Y H:i:s')]);
+            fputcsv($file, ['']);
+            
+            // Header Data CSV
             fputcsv($file, [
                 'No',
                 'NIK',
@@ -196,6 +216,20 @@ class LaporanPresensiController extends Controller
                     $keterlambatan,
                     $status_kehadiran == 'Terlambat' ? 'Karyawan datang terlambat' : 'Karyawan datang tepat waktu'
                 ]);
+            }
+
+            // Footer CSV - Tanda Tangan
+            fputcsv($file, ['']);
+            fputcsv($file, ['']);
+            fputcsv($file, [$this->extractCityFromAddress($kopSurat ? $kopSurat->alamat_instansi : null) . ', ' . Carbon::now()->translatedFormat('d F Y')]);
+            fputcsv($file, ['']);
+            fputcsv($file, [$kopSurat ? $kopSurat->jabatan_pimpinan : 'Pimpinan']);
+            fputcsv($file, ['']);
+            fputcsv($file, ['']);
+            fputcsv($file, ['']);
+            fputcsv($file, [$kopSurat ? $kopSurat->nama_pimpinan : 'Nama Pimpinan']);
+            if ($kopSurat && $kopSurat->nip_pimpinan) {
+                fputcsv($file, ['NIP: ' . $kopSurat->nip_pimpinan]);
             }
 
             fclose($file);
@@ -336,10 +370,27 @@ class LaporanPresensiController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
         ];
 
-        $callback = function() use ($rekap_karyawan, $total_hari_kerja) {
+        $callback = function() use ($rekap_karyawan, $total_hari_kerja, $request) {
             $file = fopen('php://output', 'w');
             
-            // Header CSV
+            // Header CSV dengan Kop Surat
+            $kopSurat = KopSurat::getActive();
+            
+            fputcsv($file, ['REKAP PRESENSI KARYAWAN']);
+            fputcsv($file, [$kopSurat ? $kopSurat->nama_instansi : config('app.name', 'Nama Instansi')]);
+            fputcsv($file, [$kopSurat ? $kopSurat->alamat_instansi : 'Alamat Instansi']);
+            if ($kopSurat && $kopSurat->telepon_instansi) {
+                fputcsv($file, ['Telp: ' . $kopSurat->telepon_instansi]);
+            }
+            fputcsv($file, ['']);
+            fputcsv($file, ['Periode: ' . 
+                ($request->bulan ? Carbon::create()->month((int) $request->bulan)->translatedFormat('F') : 'Semua Bulan') . ' ' .
+                ($request->tahun ? $request->tahun : date('Y'))
+            ]);
+            fputcsv($file, ['Tanggal Cetak: ' . Carbon::now()->translatedFormat('d F Y H:i:s')]);
+            fputcsv($file, ['']);
+            
+            // Header Data CSV
             fputcsv($file, [
                 'No',
                 'NIK',
@@ -376,10 +427,78 @@ class LaporanPresensiController extends Controller
                 ]);
             }
 
+            // Footer CSV - Tanda Tangan
+            fputcsv($file, ['']);
+            fputcsv($file, ['']);
+            fputcsv($file, [$this->extractCityFromAddress($kopSurat ? $kopSurat->alamat_instansi : null) . ', ' . Carbon::now()->translatedFormat('d F Y')]);
+            fputcsv($file, ['']);
+            fputcsv($file, [$kopSurat ? $kopSurat->jabatan_pimpinan : 'Pimpinan']);
+            fputcsv($file, ['']);
+            fputcsv($file, ['']);
+            fputcsv($file, ['']);
+            fputcsv($file, [$kopSurat ? $kopSurat->nama_pimpinan : 'Nama Pimpinan']);
+            if ($kopSurat && $kopSurat->nip_pimpinan) {
+                fputcsv($file, ['NIP: ' . $kopSurat->nip_pimpinan]);
+            }
+
             fclose($file);
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Cetak laporan presensi dalam bentuk PDF
+     */
+    public function cetakPresensi(Request $request)
+    {
+        // Build query presensi sama seperti di index method
+        $query = Presensi::with(['karyawan.departemen'])
+            ->whereNotNull('tanggal_presensi')
+            ->orderBy('tanggal_presensi', 'desc');
+
+        // Terapkan filter dan buat info filter
+        $filter_info = [];
+        
+        if ($request->filled('bulan') && $request->filled('tahun')) {
+            $query->whereMonth('tanggal_presensi', $request->bulan)
+                  ->whereYear('tanggal_presensi', $request->tahun);
+            $bulanNama = \Carbon\Carbon::create()->month((int) $request->bulan)->translatedFormat('F');
+            $filter_info[] = "Bulan: {$bulanNama} {$request->tahun}";
+        } elseif ($request->filled('tahun')) {
+            $query->whereYear('tanggal_presensi', $request->tahun);
+            $filter_info[] = "Tahun: {$request->tahun}";
+        }
+
+        if ($request->filled('nama_karyawan')) {
+            $query->whereHas('karyawan', function($q) use ($request) {
+                $q->where('nama_lengkap', 'like', '%' . $request->nama_karyawan . '%');
+            });
+            $filter_info[] = "Nama: {$request->nama_karyawan}";
+        }
+
+        if ($request->filled('departemen')) {
+            $query->whereHas('karyawan', function($q) use ($request) {
+                $q->where('kode_departemen', $request->departemen);
+            });
+            $dept = \App\Models\Departemen::where('kode_departemen', $request->departemen)->first();
+            $filter_info[] = "Departemen: " . ($dept ? $dept->nama_departemen : $request->departemen);
+        }
+
+        $laporan_presensi = $query->limit(1000)->get(); // Batasi untuk performa PDF
+
+        // Ambil data untuk PDF menggunakan trait
+        $title = 'Laporan Presensi Karyawan';
+        $period = $this->generatePeriodText($request->bulan, $request->tahun);
+        
+        $data = $this->getPDFData($title, $period);
+        $data['laporan_presensi'] = $laporan_presensi;
+        $data['filter_info'] = implode(' | ', $filter_info);
+
+        $pdf = Pdf::loadView('admin.dashboard.laporan.presensi.pdf-all', $data);
+        $pdf->setPaper('a4', 'landscape');
+        
+        return $pdf->download('laporan_presensi_' . date('Y-m-d_H-i-s') . '.pdf');
     }
 
     /**
@@ -418,21 +537,88 @@ class LaporanPresensiController extends Controller
         $totalHadir = $presensi->count();
         $totalTerlambat = $presensi->where('jam_masuk', '>', '07:00:00')->count();
 
-        $data = [
-            'karyawan' => $karyawan,
-            'presensi' => $presensi,
-            'bulan' => Carbon::create()->month((int) $bulan)->translatedFormat('F'),
-            'tahun' => $tahun,
-            'totalHadir' => $totalHadir,
-            'totalTerlambat' => $totalTerlambat,
-            'instansi' => config('app.name', 'Nama Instansi'),
-        ];
+        // Ambil data untuk PDF menggunakan trait
+        $title = 'Laporan Presensi Karyawan';
+        $period = 'Periode: ' . strtoupper(Carbon::create()->month((int) $bulan)->translatedFormat('F')) . ' ' . $tahun;
+        
+        $data = $this->getPDFData($title, $period);
+        $data['karyawan'] = $karyawan;
+        $data['presensi'] = $presensi;
+        $data['bulan'] = Carbon::create()->month((int) $bulan)->translatedFormat('F');
+        $data['tahun'] = $tahun;
+        $data['totalHadir'] = $totalHadir;
+        $data['totalTerlambat'] = $totalTerlambat;
 
         // Generate PDF
         $pdf = Pdf::loadView('admin.dashboard.laporan.presensi.pdf', $data)
             ->setPaper('a4', 'portrait');
 
         $fileName = 'laporan_presensi_' . $nik . '_' . $bulan . '_' . $tahun . '.pdf';
+        return $pdf->download($fileName);
+    }
+
+    /**
+     * Cetak rekap presensi dalam bentuk PDF
+     */
+    public function cetakRekap(Request $request)
+    {
+        // Build query yang sama dengan rekap
+        $query = DB::table('karyawan')
+            ->leftJoin('departemens', 'karyawan.kode_departemen', '=', 'departemens.kode_departemen')
+            ->leftJoin('presensi', 'karyawan.nik', '=', 'presensi.nik')
+            ->select(
+                'karyawan.nik',
+                'karyawan.nama_lengkap',
+                'departemens.nama_departemen',
+                DB::raw('COUNT(CASE WHEN presensi.tanggal_presensi IS NOT NULL THEN 1 END) as total_hadir'),
+                DB::raw('COUNT(CASE WHEN presensi.jam_masuk > "07:00:00" THEN 1 END) as total_terlambat')
+            );
+
+        // Terapkan filter
+        if ($request->filled('bulan')) {
+            $query->whereMonth('presensi.tanggal_presensi', $request->bulan);
+        }
+        if ($request->filled('tahun')) {
+            $query->whereYear('presensi.tanggal_presensi', $request->tahun);
+        }
+        if ($request->filled('departemen')) {
+            $query->where('departemens.kode_departemen', $request->departemen);
+        }
+
+        $rekap_karyawan = $query->groupBy('karyawan.nik', 'karyawan.nama_lengkap', 'departemens.nama_departemen')
+            ->orderBy('karyawan.nama_lengkap')
+            ->get();
+
+        // Hitung summary
+        $bulan = $request->bulan;
+        $tahun = $request->tahun;
+        $summary = $this->hitungSummaryRekap($rekap_karyawan, $bulan, $tahun);
+
+        // Ambil nama departemen untuk filter
+        $departemenFilter = null;
+        if ($request->filled('departemen')) {
+            $dept = Departemen::where('kode_departemen', $request->departemen)->first();
+            $departemenFilter = $dept ? $dept->nama_departemen : 'Departemen tidak ditemukan';
+        }
+
+        // Ambil data untuk PDF menggunakan trait
+        $title = 'Rekap Presensi Karyawan';
+        $period = ($bulan ? Carbon::create()->month((int) $bulan)->translatedFormat('F') : 'Semua Bulan') . ' ' . ($tahun ? $tahun : date('Y'));
+        
+        $data = $this->getPDFData($title, $period);
+        $data['rekap_karyawan'] = $rekap_karyawan;
+        $data['summary'] = $summary;
+        $data['departemenFilter'] = $departemenFilter;
+
+        // Generate PDF
+        $pdf = Pdf::loadView('admin.dashboard.laporan.rekap.pdf', $data)
+            ->setPaper('a4', 'landscape'); // landscape untuk tabel yang lebar
+
+        $fileName = 'rekap_presensi_' . 
+                   ($bulan ? $bulan : 'semua') . '_' . 
+                   ($tahun ? $tahun : date('Y')) . '_' . 
+                   date('Y-m-d_H-i-s') . '.pdf';
+        
         return $pdf->download($fileName);
     }
 }

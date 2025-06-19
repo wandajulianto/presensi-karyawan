@@ -17,6 +17,8 @@ use App\Http\Controllers\Admin\DataMaster\DepartemenController;
 
 use App\Http\Controllers\Admin\Laporan\LaporanPresensiController;
 use App\Http\Controllers\Admin\PengajuanIzinController;
+use App\Http\Controllers\Admin\AdminProfileController;
+use App\Http\Controllers\Admin\KonfigurasiKopSuratController;
 
 Route::middleware(['guest'])->group(function () {
     Route::get('/', function () {
@@ -99,17 +101,20 @@ Route::middleware('auth:user')->group(function () {
         ->group(function () {
             Route::get('/', 'index')->name('dashboard.admin.monitoring-presensi');
             Route::get('/export-keterlambatan', 'exportKeterlambatan')->name('dashboard.admin.monitoring-presensi.export-keterlambatan');
+            Route::get('/cetak-keterlambatan', 'cetakKeterlambatan')->name('dashboard.admin.monitoring-presensi.cetak-keterlambatan');
         });
 
     // Laporan Presensi
-    Route::controller(LaporanPresensiController::class)
+            Route::controller(LaporanPresensiController::class)
         ->prefix('admin/laporan/presensi')
         ->group(function () {
             Route::get('/', 'index')->name('dashboard.admin.laporan-presensi');
             Route::get('/export', 'export')->name('dashboard.admin.laporan-presensi.export');
             Route::get('/export-rekap', 'exportRekap')->name('dashboard.admin.laporan-presensi.export-rekap');
+            Route::get('/cetak-rekap', 'cetakRekap')->name('dashboard.admin.laporan-presensi.cetak-rekap');
+        Route::get('/cetak', 'cetakPresensi')->name('dashboard.admin.laporan-presensi.cetak');
             Route::get('/export-keterlambatan', 'exportKeterlambatan')->name('dashboard.admin.laporan-presensi.rekap');
-            Route::get('/cetak/{nik}', 'cetakPerKaryawan')->name('dashboard.admin.laporan-presensi.cetak');
+            Route::get('/cetak/{nik}', 'cetakPerKaryawan')->name('dashboard.admin.laporan-presensi.cetak-per-karyawan');
         });
 
     // Konfigurasi Kantor
@@ -133,6 +138,7 @@ Route::middleware('auth:user')->group(function () {
             Route::get('/', 'index')->name('admin.pengajuan-izin.index');
             Route::get('/create', 'create')->name('admin.pengajuan-izin.create');
             Route::get('/export/csv', 'export')->name('admin.pengajuan-izin.export');
+            Route::get('/cetak/pdf', 'cetakPDF')->name('admin.pengajuan-izin.cetak-pdf');
             Route::post('/', 'store')->name('admin.pengajuan-izin.store');
             Route::get('/{pengajuanIzin}', 'show')->name('admin.pengajuan-izin.show');
             Route::get('/{pengajuanIzin}/edit', 'edit')->name('admin.pengajuan-izin.edit');
@@ -140,6 +146,23 @@ Route::middleware('auth:user')->group(function () {
             Route::delete('/{pengajuanIzin}', 'destroy')->name('admin.pengajuan-izin.destroy');
             Route::patch('/{pengajuanIzin}/approve', 'approve')->name('admin.pengajuan-izin.approve');
             Route::patch('/{pengajuanIzin}/reject', 'reject')->name('admin.pengajuan-izin.reject');
+        });
+
+    // Admin Profile routes
+    Route::controller(AdminProfileController::class)
+        ->prefix('admin/profile')
+        ->group(function () {
+            Route::get('/', 'edit')->name('admin.profile.edit');
+            Route::put('/update', 'update')->name('admin.profile.update');
+        });
+
+    // Konfigurasi Kop Surat routes
+    Route::controller(KonfigurasiKopSuratController::class)
+        ->prefix('admin/konfigurasi/kop-surat')
+        ->group(function () {
+            Route::get('/', 'index')->name('admin.konfigurasi.kop-surat.index');
+            Route::put('/update', 'update')->name('admin.konfigurasi.kop-surat.update');
+            Route::get('/preview', 'preview')->name('admin.konfigurasi.kop-surat.preview');
         });
 });
 

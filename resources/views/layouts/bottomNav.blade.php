@@ -3,7 +3,7 @@
     <a href="{{ route('dashboard') }}" class="item {{ Route::is('dashboard') ? 'active' : '' }}">
         <div class="col">
             <ion-icon name="home-outline"></ion-icon>
-            <strong>Home</strong>
+            <strong>Beranda</strong>
         </div>
     </a>
 
@@ -11,7 +11,7 @@
     <a href="{{ route('presensi.history') }}" class="item {{ Route::is('presensi.history') ? 'active' : '' }}">
         <div class="col">
             <ion-icon name="timer-outline"></ion-icon>
-            <strong>History</strong>
+            <strong>Riwayat</strong>
         </div>
     </a>
 
@@ -37,7 +37,7 @@
     <a href="{{ route('profile') }}" class="item {{ Route::is('profile') ? 'active' : '' }}">
         <div class="col">
             <ion-icon name="people-outline" role="img" class="md hydrated" aria-label="people outline"></ion-icon>
-            <strong>Profile</strong>
+            <strong>Profil</strong>
         </div>
     </a>
 </div>

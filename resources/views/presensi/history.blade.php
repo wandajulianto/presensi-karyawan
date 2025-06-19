@@ -55,6 +55,50 @@
                 </div>
             </div>
 
+            <!-- Status Kedisiplinan Filter -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="form-group">
+                        <select name="status" id="status" class="form-control">
+                            @php
+                                $selectedStatus = request('status') ?? '';
+                            @endphp
+                            <option value="" {{ $selectedStatus == '' ? 'selected' : '' }}>
+                                Semua Status Kedisiplinan
+                            </option>
+                            <option value="tepat_waktu" {{ $selectedStatus == 'tepat_waktu' ? 'selected' : '' }}>
+                                Tepat Waktu
+                            </option>
+                            <option value="terlambat" {{ $selectedStatus == 'terlambat' ? 'selected' : '' }}>
+                                Terlambat
+                            </option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Kehadiran -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="form-group">
+                        <select name="kehadiran" id="kehadiran" class="form-control">
+                            @php
+                                $selectedKehadiran = request('kehadiran') ?? '';
+                            @endphp
+                            <option value="" {{ $selectedKehadiran == '' ? 'selected' : '' }}>
+                                Semua Kehadiran
+                            </option>
+                            <option value="hadir" {{ $selectedKehadiran == 'hadir' ? 'selected' : '' }}>
+                                Hadir
+                            </option>
+                            <option value="tidak_hadir" {{ $selectedKehadiran == 'tidak_hadir' ? 'selected' : '' }}>
+                                Tidak Hadir
+                            </option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <!-- Search Button -->
             <div class="row">
                 <div class="col-12">
@@ -86,6 +130,8 @@
             $("#getData").click(function() {
                 const month = $("#month").val();
                 const year = $("#year").val();
+                const status = $("#status").val();
+                const kehadiran = $("#kehadiran").val();
 
                 $.ajax({
                     type: 'POST',
@@ -93,7 +139,9 @@
                     data: {
                         _token: '{{ csrf_token() }}',
                         month: month,
-                        year: year
+                        year: year,
+                        status: status,
+                        kehadiran: kehadiran
                     },
                     success: function(response) {
                         $("#result").html(response);
@@ -111,10 +159,27 @@
             });
 
             /**
-             * Trigger search on page load if month/year parameters exist
+             * Trigger search on page load if parameters exist
              */
-            @if(request()->has('month') || request()->has('year'))
+            @if(isset($autoSearch) && $autoSearch)
                 $(document).ready(function() {
+                    // Set nilai dropdown sesuai parameter URL
+                    const urlParams = new URLSearchParams(window.location.search);
+                    
+                    if (urlParams.get('month')) {
+                        $("#month").val(urlParams.get('month'));
+                    }
+                    if (urlParams.get('year')) {
+                        $("#year").val(urlParams.get('year'));
+                    }
+                    if (urlParams.get('status')) {
+                        $("#status").val(urlParams.get('status'));
+                    }
+                    if (urlParams.get('kehadiran')) {
+                        $("#kehadiran").val(urlParams.get('kehadiran'));
+                    }
+                    
+                    // Trigger pencarian otomatis
                     $("#getData").trigger('click');
                 });
             @endif
