@@ -2,6 +2,49 @@
 
 @section('content')
 
+{{-- CSS untuk button rekap --}}
+<style>
+    .card-rekap-button {
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .card-rekap-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-color: #007bff;
+    }
+    
+    .card-rekap-button:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    
+    a.text-decoration-none:hover {
+        text-decoration: none !important;
+    }
+    
+    .card-rekap-button .card-body:hover ion-icon {
+        transform: scale(1.1);
+        transition: transform 0.2s ease;
+    }
+    
+    .card-rekap-button .card-body:hover span {
+        font-weight: 600;
+    }
+    
+    @media (max-width: 480px) {
+        .card-rekap-button {
+            margin-bottom: 8px;
+        }
+        
+        .card-rekap-button:hover {
+            transform: translateY(-1px);
+        }
+    }
+</style>
+
 <!-- Bagian User -->
 <div class="section" id="user-section">
     <div id="user-detail">
@@ -29,7 +72,7 @@
                     // Daftar menu utama
                     $menus = [
                         ['icon' => 'person-sharp', 'label' => 'Profil', 'class' => 'green', 'href' => route('profile')],
-                        ['icon' => 'calendar-number', 'label' => 'Cuti', 'class' => 'danger', 'href' => route('presensi.izin')],
+                        ['icon' => 'calendar-number', 'label' => 'Izin', 'class' => 'danger', 'href' => route('presensi.izin')],
                         ['icon' => 'document-text', 'label' => 'Riwayat', 'class' => 'warning', 'href' => route('presensi.history')],
                         ['icon' => 'location', 'label' => 'Lokasi', 'class' => 'orange', 'href' => route('presensi.create')],
                     ];
@@ -112,27 +155,56 @@
         <h3>Rekap Presensi Bulan {{ $monthName }} Tahun {{ $currentYear }}</h3>
         <div class="row">
             @php
-                // Data statis, sebaiknya diubah ke variabel dinamis di controller
+                $currentMonth = date('m');
+                $currentYear = date('Y');
+                
+                // Data rekap dengan link yang sesuai
                 $rekapData = [
-                    ['count' => $recapPresention->totalPresence, 'icon' => 'accessibility-outline', 'label' => 'Hadir', 'color' => 'text-primary'],
-                    ['count' => $recapIzin->totalIzin, 'icon' => 'newspaper-outline', 'label' => 'Izin', 'color' => 'text-success'],
-                    ['count' => $recapIzin->totalSakit, 'icon' => 'medkit-outline', 'label' => 'Sakit', 'color' => 'text-warning'],
-                    ['count' => $recapPresention->totalLate, 'icon' => 'alarm-outline', 'label' => 'Telat', 'color' => 'text-danger'],
+                    [
+                        'count' => $recapPresention->totalPresence, 
+                        'icon' => 'accessibility-outline', 
+                        'label' => 'Hadir', 
+                        'color' => 'text-primary',
+                        'url' => route('presensi.history') . '?month=' . $currentMonth . '&year=' . $currentYear . '&kehadiran=hadir'
+                    ],
+                    [
+                        'count' => $recapIzin->totalIzin, 
+                        'icon' => 'newspaper-outline', 
+                        'label' => 'Izin', 
+                        'color' => 'text-success',
+                        'url' => route('presensi.izin') . '?status=i&startDate=' . date('01-m-Y') . '&endDate=' . date('t-m-Y')
+                    ],
+                    [
+                        'count' => $recapIzin->totalSakit, 
+                        'icon' => 'medkit-outline', 
+                        'label' => 'Sakit', 
+                        'color' => 'text-warning',
+                        'url' => route('presensi.izin') . '?status=s&startDate=' . date('01-m-Y') . '&endDate=' . date('t-m-Y')
+                    ],
+                    [
+                        'count' => $recapPresention->totalLate, 
+                        'icon' => 'alarm-outline', 
+                        'label' => 'Telat', 
+                        'color' => 'text-danger',
+                        'url' => route('presensi.history') . '?month=' . $currentMonth . '&year=' . $currentYear . '&kehadiran=hadir&status=terlambat'
+                    ],
                 ];
             @endphp
 
             @foreach ($rekapData as $data)
                 <div class="col-3">
-                    <div class="card">
-                        <div class="card-body text-center" style="padding: 12px 12px !important; line-height: 0.8rem">
-                            <span class="badge bg-danger" style="position: absolute; top: 3px; right: 10px; font-size: 0.6rem; z-index: 999">
-                                {{ $data['count'] }}
-                            </span>
-                            <ion-icon name="{{ $data['icon'] }}" style="font-size: 1.6rem" class="{{ $data['color'] }} mb-1"></ion-icon>
-                            <br>
-                            <span style="font-size: 0.8rem; font-weight:500">{{ $data['label'] }}</span>
+                    <a href="{{ $data['url'] }}" class="text-decoration-none">
+                        <div class="card card-rekap-button">
+                            <div class="card-body text-center" style="padding: 12px 12px !important; line-height: 0.8rem">
+                                <span class="badge bg-danger" style="position: absolute; top: 3px; right: 10px; font-size: 0.6rem; z-index: 999">
+                                    {{ $data['count'] }}
+                                </span>
+                                <ion-icon name="{{ $data['icon'] }}" style="font-size: 1.6rem" class="{{ $data['color'] }} mb-1"></ion-icon>
+                                <br>
+                                <span style="font-size: 0.8rem; font-weight:500">{{ $data['label'] }}</span>
+                            </div>
                         </div>
-                    </div>
+                    </a>
                 </div>
             @endforeach
         </div>

@@ -6,10 +6,14 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Izin;
 use App\Models\Karyawan;
+use App\Models\KopSurat;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Traits\KopSuratTrait;
 
 class PengajuanIzinController extends Controller
 {
+    use KopSuratTrait;
     /**
      * Display a listing of pengajuan izin.
      */
@@ -243,13 +247,30 @@ class PengajuanIzinController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        $callback = function() use ($pengajuanIzins) {
+        $callback = function() use ($pengajuanIzins, $request) {
             $file = fopen('php://output', 'w');
             
             // BOM untuk support UTF-8 di Excel
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
             
-            // Header CSV
+            // Header CSV dengan Kop Surat
+            $kopSurat = KopSurat::getActive();
+            
+            fputcsv($file, ['LAPORAN PENGAJUAN IZIN / SAKIT']);
+            fputcsv($file, [$kopSurat ? $kopSurat->nama_instansi : config('app.name', 'Nama Instansi')]);
+            fputcsv($file, [$kopSurat ? $kopSurat->alamat_instansi : 'Alamat Instansi']);
+            if ($kopSurat && $kopSurat->telepon_instansi) {
+                fputcsv($file, ['Telp: ' . $kopSurat->telepon_instansi]);
+            }
+            fputcsv($file, ['']);
+            fputcsv($file, ['Periode: ' . 
+                ($request->bulan ? Carbon::create()->month((int) $request->bulan)->translatedFormat('F') : 'Semua Bulan') . ' ' .
+                ($request->tahun ? $request->tahun : date('Y'))
+            ]);
+            fputcsv($file, ['Tanggal Cetak: ' . Carbon::now()->translatedFormat('d F Y H:i:s')]);
+            fputcsv($file, ['']);
+            
+            // Header Data CSV
             fputcsv($file, [
                 'NIK',
                 'Nama Karyawan',
@@ -273,6 +294,20 @@ class PengajuanIzinController extends Controller
                     $izin->status_approved_text,
                     $izin->created_at->format('d/m/Y H:i')
                 ]);
+            }
+
+            // Footer CSV - Tanda Tangan
+            fputcsv($file, ['']);
+            fputcsv($file, ['']);
+            fputcsv($file, [$this->extractCityFromAddress($kopSurat ? $kopSurat->alamat_instansi : null) . ', ' . Carbon::now()->translatedFormat('d F Y')]);
+            fputcsv($file, ['']);
+            fputcsv($file, [$kopSurat ? $kopSurat->jabatan_pimpinan : 'Pimpinan']);
+            fputcsv($file, ['']);
+            fputcsv($file, ['']);
+            fputcsv($file, ['']);
+            fputcsv($file, [$kopSurat ? $kopSurat->nama_pimpinan : 'Nama Pimpinan']);
+            if ($kopSurat && $kopSurat->nip_pimpinan) {
+                fputcsv($file, ['NIP: ' . $kopSurat->nip_pimpinan]);
             }
 
             fclose($file);
@@ -306,5 +341,70 @@ class PengajuanIzinController extends Controller
             'izin' => $query->clone()->where('status', 'i')->count(),
             'sakit' => $query->clone()->where('status', 's')->count(),
         ];
+    }
+
+    /**
+     * Cetak laporan pengajuan izin dalam bentuk PDF
+     */
+    public function cetakPDF(Request $request)
+    {
+        $query = Izin::with('karyawan');
+
+        // Apply same filters as index
+        if ($request->filled('search')) {
+            $query->byNama($request->search);
+        }
+        if ($request->filled('status')) {
+            $query->byStatus($request->status);
+        }
+        if ($request->filled('approval')) {
+            $query->byApproval($request->approval);
+        }
+        if ($request->filled('bulan')) {
+            $query->byMonth($request->bulan);
+        }
+        if ($request->filled('tahun')) {
+            $query->byYear($request->tahun);
+        } else {
+            $query->byYear(date('Y'));
+        }
+
+        $pengajuanIzins = $query->orderBy('tanggal_izin', 'desc')->get();
+
+        // Get summary data
+        $summary = $this->getSummaryData($request);
+
+        // Siapkan data filter untuk tampilan
+        $filterStatus = null;
+        if ($request->filled('status')) {
+            $filterStatus = $request->status == 'i' ? 'Izin' : 'Sakit';
+        }
+
+        $filterApproval = null;
+        if ($request->filled('approval')) {
+            switch($request->approval) {
+                case '0': $filterApproval = 'Pending'; break;
+                case '1': $filterApproval = 'Disetujui'; break;
+                case '2': $filterApproval = 'Ditolak'; break;
+            }
+        }
+
+        $period = ($request->bulan ? Carbon::create()->month((int) $request->bulan)->translatedFormat('F') : 'Semua Bulan') . ' ' . ($request->tahun ? $request->tahun : date('Y'));
+
+        // Ambil data untuk PDF menggunakan trait
+        $title = 'Laporan Pengajuan Izin / Sakit';
+        
+        $data = $this->getPDFData($title, $period);
+        $data['pengajuanIzins'] = $pengajuanIzins;
+        $data['summary'] = $summary;
+        $data['filterStatus'] = $filterStatus;
+        $data['filterApproval'] = $filterApproval;
+
+        // Generate PDF
+        $pdf = Pdf::loadView('admin.dashboard.pengajuan-izin.pdf', $data)
+            ->setPaper('a4', 'landscape');
+
+        $fileName = 'laporan_pengajuan_izin_' . date('Y-m-d_H-i-s') . '.pdf';
+        return $pdf->download($fileName);
     }
 }

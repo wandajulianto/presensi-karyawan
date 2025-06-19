@@ -97,15 +97,28 @@
                       Tampilkan Laporan
                     </button>
                     @if(request()->anyFilled(['bulan', 'tahun', 'nama_karyawan', 'departemen']))
-                      <a href="{{ route('dashboard.admin.laporan-presensi.export') }}?{{ http_build_query(request()->query()) }}" class="btn btn-success ms-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-download">
-                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                          <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/>
-                          <path d="M7 11l5 5l5 -5"/>
-                          <path d="M12 4l0 12"/>
-                        </svg>
-                        Export Excel
-                      </a>
+                      <div class="btn-group ms-2" role="group">
+                        <a href="{{ route('dashboard.admin.laporan-presensi.export') }}?{{ http_build_query(request()->query()) }}" class="btn btn-success">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-download">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                            <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/>
+                            <path d="M7 11l5 5l5 -5"/>
+                            <path d="M12 4l0 12"/>
+                          </svg>
+                          Export CSV
+                        </a>
+                        <a href="{{ route('dashboard.admin.laporan-presensi.cetak') }}?{{ http_build_query(request()->query()) }}" class="btn btn-danger">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-file-type-pdf">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                            <path d="M14 3v4a1 1 0 0 0 1 1h4"/>
+                            <path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2h-8.5"/>
+                            <path d="M2 15a1 1 0 0 1 1 -1h1a1 1 0 0 1 1 1v1a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1z"/>
+                            <path d="M2 21v-2"/>
+                            <path d="M5 21v-2"/>
+                          </svg>
+                          Export PDF
+                        </a>
+                      </div>
                     @endif
                   </div>
                 </div>
@@ -268,7 +281,7 @@
                           </td>
                           <td>
                             @if(request()->filled('bulan') && request()->filled('tahun'))
-                              <a href="{{ route('dashboard.admin.laporan-presensi.cetak', ['nik' => $presensi->nik, 'bulan' => request('bulan'), 'tahun' => request('tahun')]) }}" class="btn btn-primary btn-sm" target="_blank">
+                              <a href="{{ route('dashboard.admin.laporan-presensi.cetak-per-karyawan', ['nik' => $presensi->nik, 'bulan' => request('bulan'), 'tahun' => request('tahun')]) }}" class="btn btn-primary btn-sm" target="_blank">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-printer">
                                   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                   <path d="M17 17h-10v4h10v-4z" />

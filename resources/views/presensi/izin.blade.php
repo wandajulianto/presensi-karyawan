@@ -177,6 +177,26 @@
 <script>
   
   $(document).ready(function () {
+    
+    // Auto-show filter jika ada parameter dari URL (dari dashboard)
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.get('status')) {
+      // Jika ada parameter status, show form status dan set nilai
+      $('#formFilterStatus').show();
+      $('select[name="status"]').val(urlParams.get('status'));
+      $('#filterDropdown').text('Filter Berdasarkan: Status');
+    } else if (urlParams.get('startDate') && urlParams.get('endDate')) {
+      // Jika ada parameter tanggal, show form tanggal
+      $('#formFilterTanggal').show();
+      $('#filterDropdown').text('Filter Berdasarkan: Tanggal');
+    } else if (urlParams.get('approval')) {
+      // Jika ada parameter approval, show form approval
+      $('#formFilterApproval').show();
+      $('select[name="approval"]').val(urlParams.get('approval'));
+      $('#filterDropdown').text('Filter Berdasarkan: Persetujuan');
+    }
+    
     $('.dropdown-item').on('click', function (e) {
       e.preventDefault();
       const filter = $(this).data('filter');

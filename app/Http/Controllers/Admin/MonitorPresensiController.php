@@ -7,11 +7,15 @@ use Illuminate\Http\Request;
 use App\Models\Presensi;
 use App\Models\Departemen;
 use App\Models\Kantor;
+use App\Models\KopSurat;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Traits\KopSuratTrait;
 
 class MonitorPresensiController extends Controller
 {
+    use KopSuratTrait;
     public function index(Request $request)
     {
         $query = Presensi::with(['karyawan.departemen'])
@@ -172,10 +176,27 @@ class MonitorPresensiController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
         ];
 
-        $callback = function() use ($presensis) {
+        $callback = function() use ($presensis, $request) {
             $file = fopen('php://output', 'w');
             
-            // Header CSV
+            // Header CSV dengan Kop Surat menggunakan trait
+            $kopSurat = KopSurat::getActive();
+            
+            // Kop Surat untuk CSV
+            fputcsv($file, ['LAPORAN KETERLAMBATAN PRESENSI']);
+            fputcsv($file, [$kopSurat ? $kopSurat->nama_instansi : config('app.name', 'Nama Instansi')]);
+            fputcsv($file, [$kopSurat ? $kopSurat->alamat_instansi : 'Alamat Instansi']);
+            if ($kopSurat && $kopSurat->telepon_instansi) {
+                fputcsv($file, ['Telp: ' . $kopSurat->telepon_instansi]);
+            }
+            fputcsv($file, ['']);
+            if ($request->filled('tanggal')) {
+                fputcsv($file, ['Tanggal: ' . Carbon::parse($request->tanggal)->translatedFormat('d F Y')]);
+            }
+            fputcsv($file, ['Tanggal Cetak: ' . Carbon::now()->translatedFormat('d F Y H:i:s')]);
+            fputcsv($file, ['']);
+            
+            // Header Data CSV
             fputcsv($file, [
                 'No',
                 'Tanggal',
@@ -204,9 +225,79 @@ class MonitorPresensiController extends Controller
                 ]);
             }
 
+            // Footer CSV - Tanda Tangan
+            fputcsv($file, ['']);
+            fputcsv($file, ['']);
+            fputcsv($file, [$this->extractCityFromAddress($kopSurat ? $kopSurat->alamat_instansi : null) . ', ' . Carbon::now()->translatedFormat('d F Y')]);
+            fputcsv($file, ['']);
+            fputcsv($file, [$kopSurat ? $kopSurat->jabatan_pimpinan : 'Pimpinan']);
+            fputcsv($file, ['']);
+            fputcsv($file, ['']);
+            fputcsv($file, ['']);
+            fputcsv($file, [$kopSurat ? $kopSurat->nama_pimpinan : 'Nama Pimpinan']);
+            if ($kopSurat && $kopSurat->nip_pimpinan) {
+                fputcsv($file, ['NIP: ' . $kopSurat->nip_pimpinan]);
+            }
+
             fclose($file);
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Cetak laporan keterlambatan dalam bentuk PDF
+     */
+    public function cetakKeterlambatan(Request $request)
+    {
+        $query = Presensi::with(['karyawan.departemen'])
+            ->select('presensi.*')
+            ->leftJoin('karyawan', 'presensi.nik', '=', 'karyawan.nik')
+            ->leftJoin('departemens', 'karyawan.kode_departemen', '=', 'departemens.kode_departemen')
+            ->where('presensi.jam_masuk', '>', '07:00:00'); // Hanya yang terlambat
+
+        // Terapkan filter yang sama dengan index
+        if ($request->filled('tanggal')) {
+            $query->whereDate('presensi.tanggal_presensi', $request->tanggal);
+        }
+
+        if ($request->filled('nama_lengkap')) {
+            $query->where('karyawan.nama_lengkap', 'like', '%' . $request->nama_lengkap . '%');
+        }
+
+        if ($request->filled('departemen')) {
+            $query->where('departemens.kode_departemen', $request->departemen);
+        }
+
+        $presensis = $query->orderBy('presensi.tanggal_presensi', 'desc')
+            ->orderBy('presensi.jam_masuk', 'desc')
+            ->get();
+
+        // Siapkan data filter untuk tampilan
+        $filterTanggal = $request->tanggal ? Carbon::parse($request->tanggal)->translatedFormat('d F Y') : null;
+        $filterNama = $request->nama_lengkap;
+        $filterDepartemen = null;
+        
+        if ($request->filled('departemen')) {
+            $dept = Departemen::where('kode_departemen', $request->departemen)->first();
+            $filterDepartemen = $dept ? $dept->nama_departemen : 'Departemen tidak ditemukan';
+        }
+
+        // Ambil data untuk PDF menggunakan trait
+        $title = 'Laporan Monitoring Keterlambatan';
+        $period = $filterTanggal ? 'Tanggal: ' . $filterTanggal : 'Semua Periode';
+        
+        $data = $this->getPDFData($title, $period);
+        $data['presensis'] = $presensis;
+        $data['filterTanggal'] = $filterTanggal;
+        $data['filterNama'] = $filterNama;
+        $data['filterDepartemen'] = $filterDepartemen;
+
+        // Generate PDF
+        $pdf = Pdf::loadView('admin.dashboard.monitoringPresensi.pdf', $data)
+            ->setPaper('a4', 'landscape');
+
+        $fileName = 'monitoring_keterlambatan_' . date('Y-m-d_H-i-s') . '.pdf';
+        return $pdf->download($fileName);
     }
 }

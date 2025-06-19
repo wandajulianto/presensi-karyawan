@@ -212,11 +212,15 @@ class PresensiController extends Controller
             '10' => 'Oktober', '11' => 'November', '12' => 'Desember',
         ];
 
-        return view('presensi.history', compact('months'));
+        // Jika ada parameter dari dashboard, langsung trigger pencarian
+        $autoSearch = $request->has('month') || $request->has('year') || 
+                     $request->has('status') || $request->has('kehadiran');
+
+        return view('presensi.history', compact('months', 'autoSearch'));
     }
 
     /**
-     * Mencari riwayat presensi berdasarkan bulan dan tahun.
+     * Mencari riwayat presensi berdasarkan bulan, tahun, status kedisiplinan, dan kehadiran.
      * 
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\View\View
@@ -227,15 +231,119 @@ class PresensiController extends Controller
         $nik = $user->nik;
         $month = $request->month;
         $year = $request->year;
+        $status = $request->status;
+        $kehadiran = $request->kehadiran;
 
-        $history = DB::table('presensi')
+        // Ambil jam masuk dari konfigurasi kantor
+        $kantor = Kantor::getKantorUtama();
+        
+        // Pastikan format jam masuk kantor dalam string H:i:s
+        if ($kantor && $kantor->jam_masuk) {
+            $jamMasukKantor = is_string($kantor->jam_masuk) ? 
+                $kantor->jam_masuk : 
+                $kantor->jam_masuk->format('H:i:s');
+        } else {
+            $jamMasukKantor = '07:00:00';
+        }
+
+        $query = DB::table('presensi')
             ->whereMonth('tanggal_presensi', $month)
             ->whereYear('tanggal_presensi', $year)
-            ->where('nik', $nik)
-            ->orderBy('tanggal_presensi')
-            ->get();
+            ->where('nik', $nik);
 
-        return view('presensi.historyResult', compact('history'));
+        // Filter berdasarkan status kedisiplinan dengan perbandingan string waktu
+        if ($status === 'tepat_waktu') {
+            $query->whereRaw("TIME(jam_masuk) < TIME(?)", [$jamMasukKantor]);
+        } elseif ($status === 'terlambat') {
+            $query->whereRaw("TIME(jam_masuk) >= TIME(?)", [$jamMasukKantor]);
+        }
+
+        $history = $query->orderBy('tanggal_presensi')->get();
+
+        // Generate kalender untuk bulan dan tahun yang dipilih
+        $calendarData = $this->generateCalendarData($month, $year, $nik, $status, $jamMasukKantor, $kehadiran);
+
+        // Data bulan untuk header kalender
+        $months = [
+            '01' => 'Januari', '02' => 'Februari', '03' => 'Maret',
+            '04' => 'April', '05' => 'Mei', '06' => 'Juni',
+            '07' => 'Juli', '08' => 'Agustus', '09' => 'September',
+            '10' => 'Oktober', '11' => 'November', '12' => 'Desember',
+        ];
+
+        return view('presensi.historyResult', compact('history', 'kantor', 'calendarData', 'month', 'year', 'months'));
+    }
+
+    /**
+     * Generate data kalender untuk menampilkan semua tanggal dalam bulan
+     * dengan status kehadiran
+     */
+    private function generateCalendarData($month, $year, $nik, $statusFilter = null, $jamMasukKantor = '07:00:00', $kehadiranFilter = null)
+    {
+        $calendar = [];
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        
+        // Ambil semua data presensi untuk bulan dan tahun yang dipilih
+        $presensiQuery = DB::table('presensi')
+            ->whereMonth('tanggal_presensi', $month)
+            ->whereYear('tanggal_presensi', $year)
+            ->where('nik', $nik);
+
+        // Apply filter status jika ada
+        if ($statusFilter === 'tepat_waktu') {
+            $presensiQuery->whereRaw("TIME(jam_masuk) < TIME(?)", [$jamMasukKantor]);
+        } elseif ($statusFilter === 'terlambat') {
+            $presensiQuery->whereRaw("TIME(jam_masuk) >= TIME(?)", [$jamMasukKantor]);
+        }
+
+        $presensiData = $presensiQuery->get()->keyBy('tanggal_presensi');
+
+        // Generate data untuk setiap tanggal dalam bulan
+        for ($day = 1; $day <= $daysInMonth; $day++) {
+            $date = sprintf('%04d-%02d-%02d', $year, $month, $day);
+            $dayOfWeek = date('w', strtotime($date)); // 0=Minggu, 1=Senin, ..., 6=Sabtu
+            $dayName = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][$dayOfWeek];
+
+            $dayData = [
+                'date' => $date,
+                'day' => $day,
+                'day_name' => $dayName,
+                'is_weekend' => ($dayOfWeek == 0 || $dayOfWeek == 6), // Minggu atau Sabtu
+                'is_sunday' => ($dayOfWeek == 0),
+                'is_saturday' => ($dayOfWeek == 6),
+                'presensi' => null,
+                'status' => 'tidak_hadir'
+            ];
+
+            // Cek apakah ada data presensi untuk tanggal ini
+            if (isset($presensiData[$date])) {
+                $dayData['presensi'] = $presensiData[$date];
+                $dayData['status'] = 'hadir';
+            } elseif ($dayData['is_sunday']) {
+                $dayData['status'] = 'libur_minggu';
+            } elseif ($dayData['is_saturday']) {
+                $dayData['status'] = 'libur_sabtu';
+            } else {
+                $dayData['status'] = 'tidak_hadir';
+            }
+
+            // Apply filter kehadiran
+            $includeDay = true;
+            if ($kehadiranFilter === 'hadir' && $dayData['status'] !== 'hadir') {
+                $includeDay = false;
+            } elseif ($kehadiranFilter === 'tidak_hadir') {
+                // Tidak hadir = tidak ada presensi di hari kerja (bukan weekend)
+                if ($dayData['status'] === 'hadir' || $dayData['status'] === 'libur_minggu' || $dayData['status'] === 'libur_sabtu') {
+                    $includeDay = false;
+                }
+            }
+
+            if ($includeDay) {
+                $calendar[] = $dayData;
+            }
+        }
+
+        return $calendar;
     }
 
     /**
