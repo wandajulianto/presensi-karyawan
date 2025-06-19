@@ -14,7 +14,6 @@
     <link rel="icon" type="image/png" href="{{ asset('assets/img/favicon.png') }}" sizes="32x32">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/img/icon/192x192.png') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
-    <link rel="manifest" href="__manifest.json">
 </head>
 
 <body class="bg-white">
@@ -84,7 +83,7 @@
 
                     <div class="form-links mt-2">
                         <div>
-                            <a href="page-forgot-password.html" class="text-muted">Forgot Password?</a>
+                            <a href="{{ route('login.admin') }}" class="text-muted">Login Sebagai Admin</a>
                         </div>
                     </div>
 

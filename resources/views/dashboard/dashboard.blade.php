@@ -30,8 +30,8 @@
                     $menus = [
                         ['icon' => 'person-sharp', 'label' => 'Profil', 'class' => 'green', 'href' => route('profile')],
                         ['icon' => 'calendar-number', 'label' => 'Cuti', 'class' => 'danger', 'href' => route('presensi.izin')],
-                        ['icon' => 'document-text', 'label' => 'History', 'class' => 'warning', 'href' => route('presensi.history')],
-                        ['icon' => 'location', 'label' => 'Lokasi', 'class' => 'orange', 'href' => '#lokasi'],
+                        ['icon' => 'document-text', 'label' => 'Riwayat', 'class' => 'warning', 'href' => route('presensi.history')],
+                        ['icon' => 'location', 'label' => 'Lokasi', 'class' => 'orange', 'href' => route('presensi.create')],
                     ];
                 @endphp
 
