@@ -53,19 +53,17 @@
       </div>
       <div class="nav-item dropdown">
         <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="Open user menu">
-          <span class="avatar avatar-sm" style="background-image: url(./static/avatars/000m.jpg)"></span>
+          <span class="avatar avatar-sm">
+            <img src="{{ Auth::guard('user')->user()->foto_profile }}" alt="avatar">
+          </span>
           <div class="d-none d-xl-block ps-2">
-            <div>Paweł Kuna</div>
-            <div class="mt-1 small text-muted">UI Designer</div>
+            <div>{{ Auth::guard('user')->user()->name }}</div>
+            <div class="mt-1 small text-muted">Administrator</div>
           </div>
         </a>
         <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-          <a href="#" class="dropdown-item">Status</a>
-          <a href="#" class="dropdown-item">Profile</a>
-          <a href="#" class="dropdown-item">Feedback</a>
-          <div class="dropdown-divider"></div>
-          <a href="./settings.html" class="dropdown-item">Settings</a>
-          <a href="./sign-in.html" class="dropdown-item">Logout</a>
+          <a href="{{ route('admin.profile.edit') }}" class="dropdown-item">Profil</a>
+          <a href="{{ route('logout.admin') }}" class="dropdown-item">Keluar</a>
         </div>
       </div>
     </div>
@@ -77,7 +75,7 @@
               <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="5 12 3 12 12 3 21 12 19 12" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /></svg>
             </span>
             <span class="nav-link-title">
-              Home
+              Beranda
             </span>
           </a>
         </li>
