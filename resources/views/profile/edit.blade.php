@@ -46,13 +46,31 @@
     <div class="col">
         <div class="form-group boxed">
             <div class="input-wrapper">
+                <input type="text" class="form-control" value="{{ old('nik', $karyawan->nik) }}" name="nik" placeholder="NIK" autocomplete="off" disabled>
+            </div>
+        </div>
+
+        <div class="form-group boxed">
+            <div class="input-wrapper">
                 <input type="text" class="form-control" value="{{ old('nama_lengkap', $karyawan->nama_lengkap) }}" name="nama_lengkap" placeholder="Nama Lengkap" autocomplete="off">
             </div>
         </div>
 
         <div class="form-group boxed">
             <div class="input-wrapper">
+                <input type="text" class="form-control" value="{{ old('jabatan', $karyawan->jabatan) }}" name="jabatan" placeholder="Jabatan" autocomplete="off" disabled>
+            </div>
+        </div>
+
+        <div class="form-group boxed">
+            <div class="input-wrapper">
                 <input type="text" class="form-control" value="{{ old('no_hp', $karyawan->no_hp) }}" name="no_hp" placeholder="No. HP" autocomplete="off">
+            </div>
+        </div>
+
+        <div class="form-group boxed">
+            <div class="input-wrapper">
+                <input type="text" class="form-control" value="{{ old('kode_departemen', $karyawan->kode_departemen) }}" name="kode_departemen" placeholder="Kode Departemen" autocomplete="off" disabled>
             </div>
         </div>
 
@@ -74,7 +92,7 @@
                 <span>
                     <strong>
                         <ion-icon name="cloud-upload-outline"></ion-icon>
-                        <i>Tap to Upload Foto</i>
+                        <i>Klik untuk mengubah foto</i>
                     </strong>
                 </span>
             </label>
@@ -85,6 +103,13 @@
                 <button type="submit" class="btn btn-primary btn-block">
                     <ion-icon name="refresh-outline"></ion-icon>
                     Update
+                </button>
+            </div>
+        </div>
+        <div class="form-group boxed">
+            <div class="input-wrapper">
+                <button type="submit" class="btn btn-danger btn-block">
+                    <a href="{{ route('logout')}}" class="text-white">Keluar</a>
                 </button>
             </div>
         </div>
